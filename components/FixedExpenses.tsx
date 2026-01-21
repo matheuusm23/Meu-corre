@@ -94,15 +94,15 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
     const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
     const totalIncomes = incomes.reduce((acc, curr) => acc + curr.amount, 0);
     
+    // O que ainda falta pagar de despesas
     const unpaidExpenses = expenses
       .filter(i => !i.isPaid)
       .reduce((acc, curr) => acc + curr.amount, 0);
 
-    const unreceivedIncomes = incomes
-      .filter(i => !i.isPaid)
-      .reduce((acc, curr) => acc + curr.amount, 0);
-      
-    const gap = unpaidExpenses - unreceivedIncomes;
+    // Regra solicitada: Ganhos recebidos não devem "piorar" o déficit ao serem marcados como recebidos.
+    // Portanto, o déficit/sobra deve considerar o Total de Ganhos do período contra o que ainda falta pagar.
+    // Se eu tenho R$ 1000 para pagar e R$ 500 de ganhos fixos (recebidos ou não), meu déficit real de fixas é R$ 500.
+    const gap = unpaidExpenses - totalIncomes;
     
     return {
       totalExpenses,

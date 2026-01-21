@@ -237,12 +237,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="flex items-center justify-between px-2 mt-2">
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos Recentes</h3>
-          <button onClick={() => handleOpenForm()} className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-800/30">
-            <Plus size={12} strokeWidth={3} /> Adicionar
-          </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 pb-24">
           {currentPeriodTransactions.length > 0 ? (
             currentPeriodTransactions.slice(0, 10).map(t => (
               <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between active:scale-[0.98] transition-all">
@@ -268,6 +265,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Botão flutuante (FAB) padronizado */}
+      <button 
+        onClick={() => handleOpenForm()} 
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-slate-900 dark:bg-white rounded-xl shadow-2xl flex items-center justify-center text-white dark:text-slate-900 active:scale-90 transition-all"
+      >
+        <Plus size={24} strokeWidth={3} />
+      </button>
 
       {showForm && (
         <div className="fixed inset-0 z-[110] flex items-end justify-center p-4">
