@@ -1,10 +1,9 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from './ui/Card';
-import { ExpensePieChart } from './ui/PieChart';
 import { Transaction, TransactionType, ViewMode, FixedExpense } from '../types';
-import { formatCurrency, formatDate, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, getStartOfWeek, parseDateLocal, getFixedExpensesForPeriod, formatDateFull } from '../utils';
-import { Wallet, TrendingUp, TrendingDown, Plus, X, Trash2, Calendar, Fuel, Utensils, Wrench, Home, AlertCircle, Smartphone, ShoppingBag, PieChart as PieIcon, Edit2, Info, Receipt, Clock, ChevronDown, ChevronUp, Eye, EyeOff, MapPin, Menu, BarChart3, ChevronLeft, ChevronRight } from './Icons';
+import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull } from '../utils';
+import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, ChevronUp, Clock } from './Icons';
 import { Logo } from './ui/Logo';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,15 +21,6 @@ interface DashboardProps {
 
 const DELIVERY_APPS = ['iFood', '99', 'Rappi', 'Lalamove', 'Uber', 'Loggi', 'Borborema', 'Particular'];
 const EXPENSE_CATEGORIES = ['Comida', 'Mercado', 'Gastos na rua', 'Combustível', 'Outros'];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  'Combustível': '#FF9F0A',
-  'Comida': '#FF3B30',
-  'Mercado': '#AF52DE',
-  'Gastos na rua': '#32D74B',
-  'Outros': '#8E8E93',
-  'Fixo': '#5856D6',
-};
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
   transactions, 
@@ -51,10 +41,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, []);
   
   const [showForm, setShowForm] = useState(false);
-  const [showBalanceDetails, setShowBalanceDetails] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  
+  // Estados para o novo histórico expansível
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+  const [visibleDaysCount, setVisibleDaysCount] = useState(7);
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -73,16 +65,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, startDate, endDate]);
 
-  // Agrupamento de transações por dia
+  // Agrupamento de transações por dia com totais
   const groupedTransactions = useMemo(() => {
-    const groups: Record<string, Transaction[]> = {};
-    currentPeriodTransactions.slice(0, 20).forEach(t => {
+    const groups: Record<string, { transactions: Transaction[], income: number, expense: number }> = {};
+    currentPeriodTransactions.forEach(t => {
       const dateStr = t.date.split('T')[0];
-      if (!groups[dateStr]) groups[dateStr] = [];
-      groups[dateStr].push(t);
+      if (!groups[dateStr]) {
+        groups[dateStr] = { transactions: [], income: 0, expense: 0 };
+      }
+      groups[dateStr].transactions.push(t);
+      if (t.type === 'income') groups[dateStr].income += t.amount;
+      else groups[dateStr].expense += t.amount;
     });
     return groups;
   }, [currentPeriodTransactions]);
+
+  const sortedDates = useMemo(() => Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a)), [groupedTransactions]);
+  const visibleDates = useMemo(() => sortedDates.slice(0, visibleDaysCount), [sortedDates, visibleDaysCount]);
 
   const relevantFixed = useMemo(() => {
     return getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
@@ -177,6 +176,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowForm(true);
   };
 
+  const toggleDayExpansion = (dateStr: string) => {
+    setExpandedDays(prev => ({
+      ...prev,
+      [dateStr]: !prev[dateStr]
+    }));
+    if (navigator.vibrate) navigator.vibrate(5);
+  };
+
   return (
     <div className="flex flex-col gap-2 pb-12">
       <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-700 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-900 w-full pt-8 pb-10 px-6 flex flex-col gap-6 shadow-xl">
@@ -202,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
           </div>
-          <div onClick={() => setShowBalanceDetails(true)} className="cursor-pointer active:scale-95 transition-all">
+          <div className="active:scale-95 transition-all">
              <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg">
                 <span className="text-white text-[8px] font-black uppercase tracking-[0.15em] opacity-60">Saldo Livre</span>
                 <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(monthBalance) : '••••'}</p>
@@ -246,47 +253,82 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
 
-        <div className="flex items-center justify-between px-2 mt-2">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos Recentes</h3>
+        <div className="flex items-center justify-between px-2 mt-4">
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Clock size={14} /> Histórico de Ganhos
+          </h3>
         </div>
 
-        <div className="space-y-4 pb-24">
-          {Object.entries(groupedTransactions).length > 0 ? (
-            Object.entries(groupedTransactions).map(([dateStr, txs]) => (
-              <div key={dateStr} className="space-y-2">
-                <div className="flex items-center gap-2 px-2 mt-2 mb-1">
-                   <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
-                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap bg-slate-50 dark:bg-slate-950 px-3 rounded-full border border-slate-100 dark:border-slate-800">
-                      {isSameDay(parseDateLocal(dateStr), today) ? 'Hoje' :
-                       isSameDay(parseDateLocal(dateStr), new Date(new Date().setDate(today.getDate() - 1))) ? 'Ontem' :
-                       formatDateFull(dateStr)}
-                   </span>
-                   <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
-                </div>
-                <div className="space-y-2">
-                  {txs.map(t => (
-                    <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between active:scale-[0.98] transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                          {t.type === 'income' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black dark:text-white leading-tight">{t.description}</p>
-                        </div>
-                      </div>
-                      <p className={`text-sm font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+        <div className="space-y-3 pb-24">
+          {visibleDates.length > 0 ? (
+            visibleDates.map((dateStr) => {
+              const dayData = groupedTransactions[dateStr];
+              const isExpanded = !!expandedDays[dateStr];
+              const isTodayDay = isSameDay(parseDateLocal(dateStr), today);
+              const isYesterday = isSameDay(parseDateLocal(dateStr), new Date(new Date().setDate(today.getDate() - 1)));
+              
+              return (
+                <div key={dateStr} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
+                  {/* Cabeçalho do Dia (Summary) */}
+                  <div 
+                    onClick={() => toggleDayExpansion(dateStr)}
+                    className={`p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition-colors ${isExpanded ? 'border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30' : ''}`}
+                  >
+                    <div className="flex flex-col">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                        {isTodayDay ? 'Hoje' : isYesterday ? 'Ontem' : formatDateFull(dateStr)}
                       </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-900 dark:text-white">
+                          {formatCurrency(dayData.income - dayData.expense)}
+                        </span>
+                        {dayData.expense > 0 && (
+                          <span className="text-[9px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-lg border border-rose-100/50 dark:border-rose-900/30">
+                            -{formatCurrency(dayData.expense)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
+
+                  {/* Transações Expandidas */}
+                  {isExpanded && (
+                    <div className="p-2 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                      {dayData.transactions.map(t => (
+                        <div key={t.id} onClick={() => handleOpenForm(t)} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
+                              {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
+                            </div>
+                            <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                          </div>
+                          <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
-            <div className="py-12 text-center opacity-40">
-              <Receipt size={32} className="mx-auto mb-2" />
+            <div className="py-12 text-center opacity-40 bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
+              <Receipt size={32} className="mx-auto mb-2 text-slate-300" />
               <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos no período</p>
             </div>
+          )}
+
+          {sortedDates.length > visibleDaysCount && (
+            <button 
+              onClick={() => setVisibleDaysCount(prev => prev + 7)}
+              className="w-full py-4 bg-white dark:bg-slate-900 text-slate-500 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border border-slate-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all"
+            >
+              Ver mais dias do histórico
+            </button>
           )}
         </div>
       </div>
