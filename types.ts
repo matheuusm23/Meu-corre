@@ -58,7 +58,7 @@ export interface GoalSettings {
   savingsWithdrawals?: Record<string, number>; // Retiradas da reserva { "2024-12-25": 100 }
 }
 
-export type ViewMode = 'home' | 'goals' | 'yearly-goals' | 'settings' | 'fixed-expenses' | 'schedule' | 'fuel-analysis';
+export type ViewMode = 'home' | 'goals' | 'yearly-goals' | 'settings' | 'fixed-expenses' | 'schedule' | 'fuel-analysis' | 'full-history' | 'yearly-summary';
 
 export interface SummaryData {
   income: number;

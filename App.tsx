@@ -7,6 +7,8 @@ import { FixedExpenses } from './components/FixedExpenses';
 import { YearlyGoals } from './components/YearlyGoals';
 import { WorkSchedule as WorkScheduleComp } from './components/WorkSchedule';
 import { FuelAnalysis } from './components/FuelAnalysis';
+import { FullHistory } from './components/FullHistory';
+import { YearlySummary } from './components/YearlySummary';
 import { Sidebar } from './components/ui/Sidebar';
 import { Transaction, GoalSettings, ViewMode, FixedExpense, CreditCard, WorkSchedule } from './types';
 import { v4 as uuidv4 } from 'uuid';
@@ -68,7 +70,6 @@ const App: React.FC = () => {
     
     if (savedSchedule) {
       const parsed: any = JSON.parse(savedSchedule);
-      // Migração de formato: se o dia tiver startTime/endTime direto (formato antigo), converte para shifts
       const migratedSchedule: WorkSchedule = { ...DEFAULT_SCHEDULE };
       Object.keys(parsed).forEach(day => {
         if (parsed[day].shifts) {
@@ -170,6 +171,8 @@ const App: React.FC = () => {
         {currentView === 'fixed-expenses' && <div className="px-4"><FixedExpenses fixedExpenses={fixedExpenses} creditCards={creditCards} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddExpense={handleAddFixedExpense} onUpdateExpense={handleUpdateFixedExpense} onDeleteExpense={handleDeleteFixedExpense} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'settings' && <div className="px-4"><Settings onClearData={handleClearData} goalSettings={goalSettings} onUpdateSettings={setGoalSettings} currentTheme={theme} onToggleTheme={toggleTheme} transactions={transactions} creditCards={creditCards} onAddCard={handleAddCard} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'fuel-analysis' && <div className="px-4"><FuelAnalysis transactions={transactions} fixedExpenses={fixedExpenses} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
+        {currentView === 'full-history' && <div className="px-4"><FullHistory transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
+        {currentView === 'yearly-summary' && <div className="px-4"><YearlySummary transactions={transactions} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
       </main>
     </div>
   );

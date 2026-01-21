@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from './ui/Card';
 import { Transaction, TransactionType, ViewMode, FixedExpense } from '../types';
-import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull } from '../utils';
-import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, ChevronUp, Clock } from './Icons';
+import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull, getStartOfWeek } from '../utils';
+import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Calendar } from './Icons';
 import { Logo } from './ui/Logo';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -44,9 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Estados para o novo histórico expansível
-  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
-  const [visibleDaysCount, setVisibleDaysCount] = useState(7);
+  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -65,23 +63,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, startDate, endDate]);
 
-  // Agrupamento de transações por dia com totais
-  const groupedTransactions = useMemo(() => {
-    const groups: Record<string, { transactions: Transaction[], income: number, expense: number }> = {};
+  const weeklyGroups = useMemo(() => {
+    const groups: Record<string, { 
+      startDate: Date, 
+      income: number, 
+      expense: number,
+      dailyTransactions: Record<string, Transaction[]> 
+    }> = {};
+
     currentPeriodTransactions.forEach(t => {
-      const dateStr = t.date.split('T')[0];
-      if (!groups[dateStr]) {
-        groups[dateStr] = { transactions: [], income: 0, expense: 0 };
+      const tDate = parseDateLocal(t.date);
+      const weekStart = getStartOfWeek(tDate);
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      if (!groups[weekKey]) {
+        groups[weekKey] = { 
+          startDate: weekStart, 
+          income: 0, 
+          expense: 0, 
+          dailyTransactions: {} 
+        };
       }
-      groups[dateStr].transactions.push(t);
-      if (t.type === 'income') groups[dateStr].income += t.amount;
-      else groups[dateStr].expense += t.amount;
+
+      groups[weekKey].income += t.type === 'income' ? t.amount : 0;
+      groups[weekKey].expense += t.type === 'expense' ? t.amount : 0;
+
+      const dateStr = t.date.split('T')[0];
+      if (!groups[weekKey].dailyTransactions[dateStr]) {
+        groups[weekKey].dailyTransactions[dateStr] = [];
+      }
+      groups[weekKey].dailyTransactions[dateStr].push(t);
     });
+
     return groups;
   }, [currentPeriodTransactions]);
 
-  const sortedDates = useMemo(() => Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a)), [groupedTransactions]);
-  const visibleDates = useMemo(() => sortedDates.slice(0, visibleDaysCount), [sortedDates, visibleDaysCount]);
+  const sortedWeeks = useMemo(() => Object.keys(weeklyGroups).sort((a, b) => b.localeCompare(a)), [weeklyGroups]);
 
   const relevantFixed = useMemo(() => {
     return getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
@@ -176,10 +193,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowForm(true);
   };
 
-  const toggleDayExpansion = (dateStr: string) => {
-    setExpandedDays(prev => ({
+  const toggleWeekExpansion = (weekKey: string) => {
+    setExpandedWeeks(prev => ({
       ...prev,
-      [dateStr]: !prev[dateStr]
+      [weekKey]: !prev[weekKey]
     }));
     if (navigator.vibrate) navigator.vibrate(5);
   };
@@ -255,36 +272,43 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="flex items-center justify-between px-2 mt-4">
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Clock size={14} /> Histórico de Ganhos
+            <Clock size={14} /> Histórico Semanal
           </h3>
+          <button 
+            onClick={() => onChangeView('yearly-summary')}
+            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 active:scale-90 transition-all shadow-sm flex items-center gap-1.5"
+            title="Ver faturamento anual"
+          >
+            <BarChart3 size={14} />
+            <span className="text-[9px] font-black uppercase">Resumo Anual</span>
+          </button>
         </div>
 
         <div className="space-y-3 pb-24">
-          {visibleDates.length > 0 ? (
-            visibleDates.map((dateStr) => {
-              const dayData = groupedTransactions[dateStr];
-              const isExpanded = !!expandedDays[dateStr];
-              const isTodayDay = isSameDay(parseDateLocal(dateStr), today);
-              const isYesterday = isSameDay(parseDateLocal(dateStr), new Date(new Date().setDate(today.getDate() - 1)));
-              
+          {sortedWeeks.length > 0 ? (
+            sortedWeeks.map((weekKey) => {
+              const weekData = weeklyGroups[weekKey];
+              const isExpanded = !!expandedWeeks[weekKey];
+              const weekEndDate = new Date(weekData.startDate);
+              weekEndDate.setDate(weekEndDate.getDate() + 6);
+
               return (
-                <div key={dateStr} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
-                  {/* Cabeçalho do Dia (Summary) */}
+                <div key={weekKey} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
                   <div 
-                    onClick={() => toggleDayExpansion(dateStr)}
+                    onClick={() => toggleWeekExpansion(weekKey)}
                     className={`p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition-colors ${isExpanded ? 'border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30' : ''}`}
                   >
                     <div className="flex flex-col">
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                        {isTodayDay ? 'Hoje' : isYesterday ? 'Ontem' : formatDateFull(dateStr)}
+                        {weekData.startDate.getDate()}/{weekData.startDate.getMonth() + 1} até {weekEndDate.getDate()}/{weekEndDate.getMonth() + 1}
                       </p>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900 dark:text-white">
-                          {formatCurrency(dayData.income - dayData.expense)}
+                          Faturamento: {formatCurrency(weekData.income)}
                         </span>
-                        {dayData.expense > 0 && (
-                          <span className="text-[9px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded-lg border border-rose-100/50 dark:border-rose-900/30">
-                            -{formatCurrency(dayData.expense)}
+                        {weekData.expense > 0 && (
+                          <span className="text-[9px] font-bold text-rose-500">
+                            -{formatCurrency(weekData.expense)}
                           </span>
                         )}
                       </div>
@@ -294,20 +318,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Transações Expandidas */}
                   {isExpanded && (
-                    <div className="p-2 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
-                      {dayData.transactions.map(t => (
-                        <div key={t.id} onClick={() => handleOpenForm(t)} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
-                              {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
-                            </div>
-                            <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                    <div className="p-2 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                      {Object.keys(weekData.dailyTransactions).sort((a,b) => b.localeCompare(a)).map(dayKey => (
+                        <div key={dayKey} className="space-y-1.5">
+                          <div className="px-3">
+                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                               {isSameDay(parseDateLocal(dayKey), today) ? 'Hoje' : formatDateFull(dayKey)}
+                             </span>
                           </div>
-                          <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                          </p>
+                          {weekData.dailyTransactions[dayKey].map(t => (
+                            <div key={t.id} onClick={(e) => { e.stopPropagation(); handleOpenForm(t); }} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
+                                  {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
+                                </div>
+                                <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                              </div>
+                              <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                       ))}
                     </div>
@@ -318,22 +350,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           ) : (
             <div className="py-12 text-center opacity-40 bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
               <Receipt size={32} className="mx-auto mb-2 text-slate-300" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos no período</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos no ciclo</p>
             </div>
-          )}
-
-          {sortedDates.length > visibleDaysCount && (
-            <button 
-              onClick={() => setVisibleDaysCount(prev => prev + 7)}
-              className="w-full py-4 bg-white dark:bg-slate-900 text-slate-500 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border border-slate-100 dark:border-slate-800 shadow-sm active:scale-95 transition-all"
-            >
-              Ver mais dias do histórico
-            </button>
           )}
         </div>
       </div>
 
-      {/* Botão flutuante (FAB) padronizado */}
       <button 
         onClick={() => handleOpenForm()} 
         className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-slate-900 dark:bg-white rounded-xl shadow-2xl flex items-center justify-center text-white dark:text-slate-900 active:scale-90 transition-all"
@@ -344,7 +366,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {showForm && (
         <div className="fixed inset-0 z-[110] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md" onClick={() => setShowForm(false)} />
-          <form onSubmit={handleSubmit} className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom border border-slate-200 dark:border-slate-800">
+          <form onSubmit={handleSubmit} className="relative bg-white dark:bg-slate-900 w-full max-md rounded-[2.5rem] p-6 shadow-2xl animate-in slide-in-from-bottom border border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black dark:text-white tracking-tighter">{editingId ? 'Editar' : 'Novo'} Lançamento</h3>
               <button type="button" onClick={() => setShowForm(false)} className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-full text-slate-500"><X size={20}/></button>
