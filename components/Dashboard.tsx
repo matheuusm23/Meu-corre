@@ -117,12 +117,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transactions, today]);
 
-  const monthBalance = useMemo(() => {
-    const manualBalance = currentPeriodTransactions.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
+  // Cálculo do Saldo Livre Liquidado (Até Ontem) e Ganhos de Hoje
+  const { settledMonthBalance, todayBalance } = useMemo(() => {
+    // Transações manuais de dias anteriores a hoje
+    const settledManual = currentPeriodTransactions
+      .filter(t => parseDateLocal(t.date) < today)
+      .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
+    
+    // Transações de HOJE
+    const tBalance = currentPeriodTransactions
+      .filter(t => isSameDay(parseDateLocal(t.date), today))
+      .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
+
     const paidFixedExpenses = relevantFixed.filter(e => e.type === 'expense' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
     const receivedFixedIncomes = relevantFixed.filter(e => e.type === 'income' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
-    return manualBalance - paidFixedExpenses + receivedFixedIncomes;
-  }, [currentPeriodTransactions, relevantFixed]);
+    
+    return {
+      settledMonthBalance: settledManual - paidFixedExpenses + receivedFixedIncomes,
+      todayBalance: tBalance
+    };
+  }, [currentPeriodTransactions, relevantFixed, today]);
 
   const monthGrossIncome = useMemo(() => {
     const manualIncomes = currentPeriodTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
@@ -227,9 +241,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="active:scale-95 transition-all">
-             <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg">
+             <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg min-w-[130px]">
                 <span className="text-white text-[8px] font-black uppercase tracking-[0.15em] opacity-60">Saldo Livre</span>
-                <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(monthBalance) : '••••'}</p>
+                <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(settledMonthBalance) : '••••'}</p>
+                {/* Prévia de ganhos de hoje conforme solicitado */}
+                {isBalanceVisible && todayBalance !== 0 && (
+                  <div className="mt-1.5 flex flex-col items-start animate-in fade-in slide-in-from-top-1 duration-500">
+                    <p className="text-[7px] text-emerald-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
+                    <p className="text-[10px] text-emerald-50 font-black tracking-tight leading-none">
+                       {formatCurrency(settledMonthBalance + todayBalance)}
+                    </p>
+                  </div>
+                )}
              </div>
           </div>
         </div>
