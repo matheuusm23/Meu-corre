@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Transaction, FixedExpense, ViewMode } from '../types';
-import { formatCurrency, getISODate, parseDateLocal } from '../utils';
-import { ChevronLeft, Calendar as CalIcon, Fuel, Info, Menu, X, Filter, TrendingDown, Clock, Search } from './Icons';
+import { formatCurrency, getISODate, parseDateLocal, getFixedExpensesForPeriod } from '../utils';
+// Added Receipt to the imported icons
+import { ChevronLeft, Calendar as CalIcon, Fuel, Info, Menu, X, Filter, TrendingDown, Clock, Search, Receipt } from './Icons';
 
 interface FuelAnalysisProps {
   transactions: Transaction[];
@@ -32,7 +33,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
     const end = parseDateLocal(endDateStr);
     end.setHours(23, 59, 59, 999);
 
-    // Filtrar transações manuais de combustível
+    // 1. Filtrar transações manuais de combustível
     const manualFuel = transactions.filter(t => {
       if (t.type !== 'expense') return false;
       const tDate = parseDateLocal(t.date);
@@ -40,13 +41,34 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
       
       const desc = t.description.toLowerCase();
       return desc.includes('combustível') || desc.includes('gasolina') || desc.includes('posto') || desc.includes('etanol');
-    });
+    }).map(t => ({
+      id: t.id,
+      description: t.description,
+      amount: t.amount,
+      date: t.date,
+      isFixed: false
+    }));
 
-    const combined = [...manualFuel].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // 2. Filtrar despesas fixas pagas que sejam de combustível no período
+    const fixedInPeriod = getFixedExpensesForPeriod(fixedExpenses, start, end);
+    const fixedFuel = fixedInPeriod.filter(e => {
+      if (e.type !== 'expense' || !e.isPaid) return false;
+      const cat = e.category?.toLowerCase() || '';
+      const title = e.title?.toLowerCase() || '';
+      return cat.includes('combustível') || title.includes('combustível') || title.includes('gasolina');
+    }).map(e => ({
+      id: e.id,
+      description: e.title,
+      amount: e.amount,
+      date: e.occurrenceDate,
+      isFixed: true
+    }));
+
+    const combined = [...manualFuel, ...fixedFuel].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const total = combined.reduce((acc, t) => acc + t.amount, 0);
 
     return { items: combined, total };
-  }, [transactions, startDateStr, endDateStr]);
+  }, [transactions, fixedExpenses, startDateStr, endDateStr]);
 
   const setQuickRange = (startDay: number, endDay: number | null) => {
     const now = new Date();
@@ -100,7 +122,6 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
              <Search size={16} className="text-slate-300" />
           </div>
 
-          {/* Botões de Atalho: Quinzena e Mês */}
           <div className="grid grid-cols-3 gap-2 mb-6">
             <button 
               onClick={() => setQuickRange(1, 15)}
@@ -127,12 +148,11 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
 
           <div className="h-[1px] bg-slate-100 dark:bg-slate-800 mb-6" />
 
-          {/* Inputs de Data Personalizados */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Data de Início</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Início</label>
               <div className="relative group">
-                <CalIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 transition-transform group-hover:scale-110" />
+                <CalIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500" />
                 <input 
                   type="date" 
                   value={startDateStr} 
@@ -142,9 +162,9 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Data de Término</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Término</label>
               <div className="relative group">
-                <CalIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500 transition-transform group-hover:scale-110" />
+                <CalIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500" />
                 <input 
                   type="date" 
                   value={endDateStr} 
@@ -165,7 +185,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
             <div className="w-16 h-16 rounded-[2rem] bg-amber-500 text-white flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30">
               <Fuel size={32} strokeWidth={2.5} />
             </div>
-            <p className="text-[11px] font-black text-white/50 dark:text-slate-400 uppercase tracking-[0.3em] mb-2">Total Investido no Período</p>
+            <p className="text-[11px] font-black text-white/50 dark:text-slate-400 uppercase tracking-[0.3em] mb-2">Total no Período</p>
             <h2 className="text-5xl font-black text-white dark:text-slate-900 tracking-tighter leading-none mb-1">
               {formatCurrency(fuelData.total)}
             </h2>
@@ -173,7 +193,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
                <div className="flex items-center gap-2 px-4 py-2 bg-white/10 dark:bg-slate-100 rounded-full border border-white/10 dark:border-slate-200">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   <p className="text-[10px] font-black text-white dark:text-slate-600 uppercase tracking-widest leading-none">
-                    {fuelData.items.length} Abastecimentos
+                    {fuelData.items.length} Lançamentos
                   </p>
                </div>
             </div>
@@ -186,7 +206,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
         <div className="flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-slate-400" />
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Extrato Detalhado</h3>
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Histórico Detalhado</h3>
           </div>
           <TrendingDown size={14} className="text-rose-400" />
         </div>
@@ -194,10 +214,14 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
         <div className="space-y-3">
           {fuelData.items.length > 0 ? (
             fuelData.items.map(item => (
-              <div key={item.id} className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-lg flex items-center justify-between group transition-all hover:translate-y-[-2px] active:scale-[0.98]">
+              <div key={item.id + item.date} className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-lg flex items-center justify-between group transition-all hover:translate-y-[-2px] active:scale-[0.98]">
                 <div className="flex items-center gap-5">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-500 flex items-center justify-center shadow-inner border border-amber-100/50 dark:border-amber-900/30 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                    <Fuel size={22} />
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner border transition-colors duration-300 ${
+                    item.isFixed 
+                      ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-500 border-indigo-100/50' 
+                      : 'bg-amber-50 dark:bg-amber-950/30 text-amber-500 border-amber-100/50'
+                  }`}>
+                    {item.isFixed ? <Receipt size={22} /> : <Fuel size={22} />}
                   </div>
                   <div>
                     <p className="text-base font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
@@ -206,7 +230,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
                     <div className="flex items-center gap-2">
                        <CalIcon size={10} className="text-slate-400" />
                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                         {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                         {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} {item.isFixed && <span className="ml-1 text-indigo-500/70">(Fixo)</span>}
                        </p>
                     </div>
                   </div>
@@ -224,7 +248,6 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
                   <Fuel size={40} className="text-slate-300" />
                </div>
                <p className="text-[12px] font-black uppercase tracking-widest text-slate-400">Nenhum gasto encontrado</p>
-               <p className="text-[10px] font-medium text-slate-400 mt-2 px-10">Ajuste o período para ver o histórico de abastecimentos.</p>
             </div>
           )}
         </div>
@@ -239,7 +262,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
           <div className="flex-1">
             <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-[0.2em] mb-2">Dica do Meu Corre</p>
             <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed tracking-tight">
-              Analisar seus gastos por <span className="font-black text-slate-900 dark:text-white">quinzena</span> ajuda a entender picos de consumo e planejar melhor a reserva financeira do final do mês.
+              Filtrar por <span className="font-black text-slate-900 dark:text-white">quinzena</span> ajuda você a entender se o seu consumo está dentro do planejado para o mês todo.
             </p>
           </div>
         </div>
