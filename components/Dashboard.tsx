@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { ExpensePieChart } from './ui/PieChart';
 import { Transaction, TransactionType, ViewMode, FixedExpense } from '../types';
-import { formatCurrency, formatDate, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, getStartOfWeek, parseDateLocal, getFixedExpensesForPeriod } from '../utils';
+import { formatCurrency, formatDate, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, getStartOfWeek, parseDateLocal, getFixedExpensesForPeriod, formatDateFull } from '../utils';
 import { Wallet, TrendingUp, TrendingDown, Plus, X, Trash2, Calendar, Fuel, Utensils, Wrench, Home, AlertCircle, Smartphone, ShoppingBag, PieChart as PieIcon, Edit2, Info, Receipt, Clock, ChevronDown, ChevronUp, Eye, EyeOff, MapPin, Menu, BarChart3, ChevronLeft, ChevronRight } from './Icons';
 import { Logo } from './ui/Logo';
 import { v4 as uuidv4 } from 'uuid';
@@ -72,6 +72,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return tDate >= startDate && tDate <= endDate;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, startDate, endDate]);
+
+  // Agrupamento de transações por dia
+  const groupedTransactions = useMemo(() => {
+    const groups: Record<string, Transaction[]> = {};
+    currentPeriodTransactions.slice(0, 20).forEach(t => {
+      const dateStr = t.date.split('T')[0];
+      if (!groups[dateStr]) groups[dateStr] = [];
+      groups[dateStr].push(t);
+    });
+    return groups;
+  }, [currentPeriodTransactions]);
 
   const relevantFixed = useMemo(() => {
     return getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
@@ -239,22 +250,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos Recentes</h3>
         </div>
 
-        <div className="space-y-2 pb-24">
-          {currentPeriodTransactions.length > 0 ? (
-            currentPeriodTransactions.slice(0, 10).map(t => (
-              <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between active:scale-[0.98] transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                    {t.type === 'income' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black dark:text-white leading-tight">{t.description}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{formatDate(t.date)}</p>
-                  </div>
+        <div className="space-y-4 pb-24">
+          {Object.entries(groupedTransactions).length > 0 ? (
+            Object.entries(groupedTransactions).map(([dateStr, txs]) => (
+              <div key={dateStr} className="space-y-2">
+                <div className="flex items-center gap-2 px-2 mt-2 mb-1">
+                   <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
+                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap bg-slate-50 dark:bg-slate-950 px-3 rounded-full border border-slate-100 dark:border-slate-800">
+                      {isSameDay(parseDateLocal(dateStr), today) ? 'Hoje' :
+                       isSameDay(parseDateLocal(dateStr), new Date(new Date().setDate(today.getDate() - 1))) ? 'Ontem' :
+                       formatDateFull(dateStr)}
+                   </span>
+                   <div className="h-[1px] flex-1 bg-slate-100 dark:bg-slate-800" />
                 </div>
-                <p className={`text-sm font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                </p>
+                <div className="space-y-2">
+                  {txs.map(t => (
+                    <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between active:scale-[0.98] transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                          {t.type === 'income' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black dark:text-white leading-tight">{t.description}</p>
+                        </div>
+                      </div>
+                      <p className={`text-sm font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))
           ) : (
