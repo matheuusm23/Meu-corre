@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { Transaction, TransactionType, ViewMode, FixedExpense, UserProfile } from '../types';
 import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull, getStartOfWeek } from '../utils';
@@ -45,7 +45,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+  const [chartVisible, setChartVisible] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
 
   const [amount, setAmount] = useState('');
@@ -53,6 +53,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [date, setDate] = useState(getISODate(new Date()));
   const [type, setType] = useState<TransactionType>('income');
   const [category, setCategory] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setChartVisible(true), 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const { startDate, endDate } = useMemo(() => 
     getBillingPeriodRange(viewDate, startDayOfMonth, endDayOfMonth), 
@@ -64,6 +69,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return tDate >= startDate && tDate <= endDate;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, startDate, endDate]);
+
+  const weeklyPerformance = useMemo(() => {
+    const weekStart = getStartOfWeek(today);
+    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    
+    return days.map((label, index) => {
+      const currentDay = new Date(weekStart);
+      currentDay.setDate(weekStart.getDate() + index);
+      const dayTransactions = transactions.filter(t => 
+        t.type === 'income' && isSameDay(parseDateLocal(t.date), currentDay)
+      );
+      const total = dayTransactions.reduce((acc, t) => acc + t.amount, 0);
+      return { 
+        label, 
+        value: total, 
+        isToday: isSameDay(currentDay, today) 
+      };
+    });
+  }, [transactions, today]);
+
+  const maxDailyValue = useMemo(() => {
+    const values = weeklyPerformance.map(d => d.value);
+    const max = Math.max(...values);
+    return max > 100 ? max * 1.1 : 200;
+  }, [weeklyPerformance]);
 
   const weeklyGroups = useMemo(() => {
     const groups: Record<string, { 
@@ -216,6 +246,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-12">
+      {/* Banner de Topo Emerald */}
       <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-700 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-900 w-full pt-8 pb-10 px-6 flex flex-col gap-12 shadow-xl">
         <header className="relative flex items-center justify-between z-10 w-full h-10">
           <div className="flex flex-col">
@@ -249,20 +280,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
              <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg min-w-[130px]">
                 <span className="text-white text-[8px] font-black uppercase tracking-[0.15em] opacity-60">Saldo Livre</span>
                 <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(settledMonthBalance) : '••••'}</p>
-                {isBalanceVisible && todayBalance !== 0 && (
-                  <div className="mt-1.5 flex flex-col items-start animate-in fade-in slide-in-from-top-1 duration-500">
-                    <p className="text-[7px] text-emerald-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
-                    <p className="text-[10px] text-emerald-50 font-black tracking-tight leading-none">
-                       {formatCurrency(settledMonthBalance + todayBalance)}
-                    </p>
-                  </div>
-                )}
              </div>
           </div>
         </div>
       </div>
 
       <div className="px-4 flex flex-col gap-3 mt-[-20px] relative z-20">
+        {/* Card de Ganhos do Dia */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.25rem] border border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -280,11 +304,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        {/* Cards de Atalhos e Combustível */}
         <div className="grid grid-cols-2 gap-3">
           <Card 
             title="Ganhos Semana" 
             value={formatCurrency(weekBalance)} 
-            icon={<BarChart3 size={14} className="text-emerald-500"/>} 
+            icon={<TrendingUp size={14} className="text-emerald-500"/>} 
             valueClassName="text-base" 
           />
           <Card 
@@ -297,28 +322,62 @@ export const Dashboard: React.FC<DashboardProps> = ({
           />
         </div>
 
+        {/* GRÁFICO COMPACTO DE DESEMPENHO (Agora acima do histórico) */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.25rem] border border-slate-100 dark:border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <BarChart3 size={14} className="text-emerald-500" /> Rendimento Semanal
+            </h3>
+            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+              Total: {formatCurrency(weekBalance)}
+            </span>
+          </div>
+
+          <div className="flex items-end justify-between h-32 pt-2 gap-2">
+            {weeklyPerformance.map((day, idx) => {
+              const barHeight = chartVisible ? (day.value / maxDailyValue) * 100 : 0;
+              return (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group h-full">
+                  <div className="relative w-full flex flex-col items-center justify-end h-full">
+                    <div className="absolute inset-0 w-full bg-slate-100 dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700 shadow-inner" />
+                    <div 
+                      className={`w-full rounded-sm transition-all duration-1000 ease-out relative z-10 shadow-md ${
+                        day.isToday 
+                          ? 'bg-emerald-500 shadow-emerald-500/30' 
+                          : 'bg-slate-500 dark:bg-slate-600 group-hover:bg-emerald-400'
+                      }`}
+                      style={{ height: `${Math.max(day.value > 0 && chartVisible ? 6 : 0, barHeight)}%` }}
+                    />
+                  </div>
+                  <span className={`text-[9px] font-black uppercase tracking-tighter ${day.isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
+                    {day.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Histórico Semanal (Lista) */}
         <div className="flex items-center justify-between px-2 mt-4">
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
             <Clock size={14} /> Histórico Semanal
           </h3>
           <button 
             onClick={() => onChangeView('yearly-summary')}
-            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 active:scale-90 transition-all shadow-sm flex items-center gap-1.5"
-            title="Ver faturamento anual"
+            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 active:scale-90 transition-all shadow-sm"
           >
             <BarChart3 size={14} />
-            <span className="text-[9px] font-black uppercase">Resumo Anual</span>
           </button>
         </div>
 
-        <div className="space-y-3 pb-24">
+        <div className="space-y-3 mb-24">
           {sortedWeeks.length > 0 ? (
             sortedWeeks.map((weekKey) => {
               const weekData = weeklyGroups[weekKey];
               const isExpanded = !!expandedWeeks[weekKey];
               const weekEndDate = new Date(weekData.startDate);
               weekEndDate.setDate(weekEndDate.getDate() + 6);
-
               return (
                 <div key={weekKey} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
                   <div 
@@ -327,47 +386,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   >
                     <div className="flex flex-col">
                       <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                        {weekData.startDate.getDate()}/{weekData.startDate.getMonth() + 1} até {weekEndDate.getDate()}/{weekEndDate.getMonth() + 1}
+                        {weekData.startDate.getDate()}/{weekData.startDate.getMonth() + 1} - {weekEndDate.getDate()}/{weekEndDate.getMonth() + 1}
                       </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-slate-900 dark:text-white">
-                          Faturamento: {formatCurrency(weekData.income)}
-                        </span>
-                        {weekData.expense > 0 && (
-                          <span className="text-[9px] font-bold text-rose-500">
-                            -{formatCurrency(weekData.expense)}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                        {formatCurrency(weekData.income)}
+                      </span>
                     </div>
                     <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                       <ChevronDown size={16} />
                     </div>
                   </div>
-
                   {isExpanded && (
-                    <div className="p-2 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                    <div className="p-2 space-y-1.5 animate-in slide-in-from-top-2 duration-300">
                       {Object.keys(weekData.dailyTransactions).sort((a,b) => b.localeCompare(a)).map(dayKey => (
-                        <div key={dayKey} className="space-y-1.5">
-                          <div className="px-3">
-                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                               {isSameDay(parseDateLocal(dayKey), today) ? 'Hoje' : formatDateFull(dayKey)}
-                             </span>
+                        weekData.dailyTransactions[dayKey].map(t => (
+                          <div key={t.id} onClick={() => handleOpenForm(t)} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
+                             <div className="flex items-center gap-3">
+                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
+                                 {t.type === 'income' ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
+                               </div>
+                               <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                             </div>
+                             <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                               {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                             </p>
                           </div>
-                          {weekData.dailyTransactions[dayKey].map(t => (
-                            <div key={t.id} onClick={(e) => { e.stopPropagation(); handleOpenForm(t); }} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
-                                  {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
-                                </div>
-                                <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
-                              </div>
-                              <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                        ))
                       ))}
                     </div>
                   )}
@@ -375,9 +419,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               );
             })
           ) : (
-            <div className="py-12 text-center opacity-40 bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="py-12 text-center opacity-40 bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200">
               <Receipt size={32} className="mx-auto mb-2 text-slate-300" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos no ciclo</p>
+              <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos</p>
             </div>
           )}
         </div>
@@ -398,33 +442,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <h3 className="text-xl font-black dark:text-white tracking-tighter">{editingId ? 'Editar' : 'Novo'} Lançamento</h3>
               <button type="button" onClick={() => setShowForm(false)} className="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-full text-slate-500"><X size={20}/></button>
             </div>
-            
             <div className="space-y-4">
                <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex shadow-inner">
                   <button type="button" onClick={() => setType('income')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all ${type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}><TrendingUp size={16} /> Ganho</button>
                   <button type="button" onClick={() => setType('expense')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all ${type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}><TrendingDown size={16} /> Gasto</button>
                </div>
-
                <div className="relative">
                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">R$</span>
-                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:outline-none dark:text-white border border-slate-200 dark:border-slate-800" />
+                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:outline-none dark:text-white border border-slate-200" />
                </div>
-
-               <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição (ex: iFood)" className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm dark:text-white focus:outline-none border border-slate-200 dark:border-slate-800" />
-
+               <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição (ex: iFood)" className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm dark:text-white focus:outline-none border border-slate-200" />
                <div className="grid grid-cols-2 gap-3">
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white focus:outline-none border border-slate-200 dark:border-slate-800" />
-                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white focus:outline-none border border-slate-200 dark:border-slate-800">
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white border border-slate-200" />
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white border border-slate-200">
                     <option value="">Categoria</option>
                     {type === 'income' ? DELIVERY_APPS.map(app => <option key={app} value={app}>{app}</option>) : EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                </div>
-
                <div className="flex gap-3 pt-2">
                  {editingId && (
-                   <button type="button" onClick={() => { onDeleteTransaction(editingId); setShowForm(false); }} className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100"><Trash2 size={24}/></button>
+                   <button type="button" onClick={() => { onDeleteTransaction(editingId!); setShowForm(false); }} className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100"><Trash2 size={24}/></button>
                  )}
-                 <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-all">
+                 <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm shadow-xl">
                     {editingId ? 'Salvar Alterações' : 'Confirmar Lançamento'}
                  </button>
                </div>
