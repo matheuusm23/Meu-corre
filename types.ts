@@ -15,6 +15,14 @@ export interface Transaction {
   type: TransactionType;
 }
 
+export interface PlannedMaintenance {
+  id: string;
+  description: string;
+  estimatedValue: number;
+  isDone: boolean;
+  targetDate?: string; // ISO string (YYYY-MM-DD)
+}
+
 export type RecurrenceType = 'monthly' | 'installments' | 'single';
 
 export interface CreditCard {
@@ -64,7 +72,7 @@ export interface GoalSettings {
   savingsWithdrawals?: Record<string, number>; // Retiradas da reserva { "2024-12-25": 100 }
 }
 
-export type ViewMode = 'home' | 'goals' | 'yearly-goals' | 'settings' | 'fixed-expenses' | 'schedule' | 'fuel-analysis' | 'full-history' | 'yearly-summary';
+export type ViewMode = 'home' | 'goals' | 'yearly-goals' | 'settings' | 'fixed-expenses' | 'schedule' | 'fuel-analysis' | 'full-history' | 'yearly-summary' | 'maintenance';
 
 export interface SummaryData {
   income: number;
