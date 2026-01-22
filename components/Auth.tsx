@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { Logo } from './ui/Logo';
-import { User, Lock, ChevronRight, CheckCircle2 } from './Icons';
+import { User, Lock, ChevronRight, CheckCircle2, AlertCircle } from './Icons';
 
 interface AuthProps {
   onLogin: (profile: UserProfile) => void;
@@ -10,11 +10,13 @@ interface AuthProps {
 }
 
 export const Auth: React.FC<AuthProps> = ({ onLogin, existingProfile }) => {
-  const isSignup = !existingProfile;
+  const [mode, setMode] = useState<'login' | 'signup'>(existingProfile ? 'login' : 'signup');
   const [name, setName] = useState('');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const isSignup = mode === 'signup';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,17 +24,26 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, existingProfile }) => {
 
     if (isSignup) {
       if (!name || !login || !password) {
-        setError('Preencha todos os campos');
+        setError('Preencha todos os campos para o cadastro');
         return;
       }
       onLogin({ name, login, password });
     } else {
+      if (!existingProfile) {
+        setError('Nenhum cadastro encontrado neste dispositivo. Crie uma conta primeiro.');
+        return;
+      }
       if (login === existingProfile.login && password === existingProfile.password) {
         onLogin(existingProfile);
       } else {
         setError('Login ou senha incorretos');
       }
     }
+  };
+
+  const toggleMode = () => {
+    setMode(prev => prev === 'login' ? 'signup' : 'login');
+    setError('');
   };
 
   return (
@@ -93,7 +104,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, existingProfile }) => {
           </div>
 
           {error && (
-            <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">
+            <div className="bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl flex items-center gap-2">
+              <AlertCircle size={16} className="text-rose-500 shrink-0" />
               <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest text-center">{error}</p>
             </div>
           )}
@@ -107,10 +119,17 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, existingProfile }) => {
           </button>
         </form>
 
-        <div className="pt-6 flex flex-col items-center gap-4">
-           <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              <CheckCircle2 size={12} className="text-emerald-500" /> Dados seguros e locais
-           </div>
+        <div className="pt-2 flex flex-col items-center gap-6">
+          <button 
+            onClick={toggleMode}
+            className="text-emerald-500 text-xs font-black uppercase tracking-widest hover:text-emerald-400 transition-colors"
+          >
+            {isSignup ? 'Já possui um cadastro? Faça login' : 'Novo por aqui? Criar uma conta'}
+          </button>
+
+          <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">
+            <CheckCircle2 size={12} className="text-emerald-500" /> Dados seguros e locais
+          </div>
         </div>
       </div>
     </div>

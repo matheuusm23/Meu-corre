@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { FixedExpense, RecurrenceType, CreditCard, TransactionType } from '../types';
 import { formatCurrency, getBillingPeriodRange, getISODate, getFixedExpensesForPeriod, parseDateLocal } from '../utils';
@@ -378,9 +377,9 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
          </div>
       </div>
 
-      {creditCards.length > 0 && (
-        <div className="px-2 space-y-2 mt-1">
-           <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Cartões</h3>
+      <div className="px-2 space-y-2 mt-1">
+         <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-2">Cartões</h3>
+         {creditCards.length > 0 ? (
            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-0.5">
               {creditCards.map(card => (
                 <div key={card.id} className="shrink-0 w-40 h-24 p-4 rounded-2xl flex flex-col justify-between shadow-lg relative overflow-hidden active:scale-95 transition-transform" style={{ backgroundColor: card.color }}>
@@ -395,8 +394,19 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
                 </div>
               ))}
            </div>
-        </div>
-      )}
+         ) : (
+          <div className="px-1">
+             <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                   <CardIcon size={16} />
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight leading-tight">
+                  Cadastre seu cartão de crédito em ajustes para visualizar aqui
+                </p>
+             </div>
+          </div>
+         )}
+      </div>
 
       <div className="px-2 space-y-3 mt-1">
          <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-100 dark:border-slate-800 shadow-md">
@@ -522,6 +532,7 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                    <div className="space-y-1">
                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Primeiro Vencimento</span>
+                      {/* Fixed: Replaced incorrect 'setDate' with 'setFormDate' */}
                       <input type="date" required value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-3 rounded-xl font-black text-xs focus:outline-none dark:text-white border border-slate-200 dark:border-slate-800" />
                    </div>
                    <div className="space-y-1">
