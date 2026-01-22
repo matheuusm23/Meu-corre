@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, PlannedMaintenance, GoalSettings } from '../types';
 import { formatCurrency, getBillingPeriodRange, parseDateLocal, getISODate } from '../utils';
-import { Menu, Wrench, Plus, Trash2, X, CheckCircle2, TrendingDown, Info, ShoppingBag, Eye, Calendar, Clock, AlertCircle } from './Icons';
+import { Menu, Wrench, Plus, Trash2, X, CheckCircle2, TrendingDown, Info, ShoppingBag, Eye, Calendar, Clock, AlertCircle, ChevronDown, ChevronUp } from './Icons';
 import { v4 as uuidv4 } from 'uuid';
 
 interface MaintenanceProps {
@@ -22,6 +22,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
   const [newDesc, setNewDesc] = useState('');
   const [newValue, setNewValue] = useState('');
   const [newTargetDate, setNewTargetDate] = useState(getISODate(new Date()));
@@ -44,11 +45,13 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transactions, startDate, endDate]);
 
-  // Histórico Anual por Mês
+  // Histórico Anual Detalhado
   const yearlyMonthlyData = useMemo(() => {
     const data = Array.from({ length: 12 }, (_, i) => ({
+      monthIndex: i,
       monthName: new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date(currentYear, i)),
-      value: 0
+      value: 0,
+      items: [] as Transaction[]
     }));
 
     transactions.forEach(t => {
@@ -56,8 +59,14 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
         const tDate = parseDateLocal(t.date);
         if (tDate.getFullYear() === currentYear) {
           data[tDate.getMonth()].value += t.amount;
+          data[tDate.getMonth()].items.push(t);
         }
       }
+    });
+
+    // Ordenar itens de cada mês por data decrescente
+    data.forEach(month => {
+      month.items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
 
     return data;
@@ -99,6 +108,11 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
     if (navigator.vibrate) navigator.vibrate(8);
   };
 
+  const toggleMonth = (idx: number) => {
+    setExpandedMonth(expandedMonth === idx ? null : idx);
+    if (navigator.vibrate) navigator.vibrate(5);
+  };
+
   return (
     <div className="flex flex-col gap-5 pb-28 pt-4">
       {/* Header CompactO */}
@@ -120,7 +134,10 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
 
       {/* Resumo do Ciclo Atual - Design Aumentado Moderadamente */}
       <section className="px-2">
-        <div className="bg-slate-900 dark:bg-white p-6 rounded-[2.5rem] border border-slate-700 dark:border-slate-100 shadow-xl relative overflow-hidden group transition-all duration-300">
+        <div 
+          onClick={() => setShowHistoryModal(true)}
+          className="bg-slate-900 dark:bg-white p-6 rounded-[2.5rem] border border-slate-700 dark:border-slate-100 shadow-xl relative overflow-hidden group transition-all duration-300 cursor-pointer active:scale-[0.98]"
+        >
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-110 transition-transform duration-700" />
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="flex items-center gap-5">
@@ -136,7 +153,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
             </div>
             
             <button 
-              onClick={() => setShowHistoryModal(true)}
+              onClick={(e) => { e.stopPropagation(); setShowHistoryModal(true); }}
               className="flex items-center gap-2 px-4 py-2.5 bg-white/10 dark:bg-slate-100 rounded-2xl border border-white/10 dark:border-slate-200 text-emerald-400 dark:text-emerald-600 active:scale-95 transition-all shadow-lg backdrop-blur-md"
               title="Ver Histórico Anual"
             >
@@ -240,39 +257,74 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
       {showHistoryModal && (
         <div className="fixed inset-0 z-[150] flex items-end justify-center p-4">
            <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" onClick={() => setShowHistoryModal(false)} />
-           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in slide-in-from-bottom duration-500 flex flex-col max-h-[75vh]">
+           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in slide-in-from-bottom duration-500 flex flex-col max-h-[85vh]">
               <div className="flex justify-between items-center mb-6 shrink-0">
                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Análise Anual</h3>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">Gastos Mensais em {currentYear}</p>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Histórico de Gastos</h3>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">Gastos Detalhados em {currentYear}</p>
                  </div>
                  <button onClick={() => setShowHistoryModal(false)} className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"><X size={20}/></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 pb-4">
-                 {yearlyMonthlyData.map((data, idx) => (
-                   <div key={idx} className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm">
-                            <Calendar size={14} className="text-slate-400" />
-                         </div>
-                         <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mês {idx + 1}</p>
-                            <p className="text-xs font-black text-slate-900 dark:text-white capitalize leading-none">{data.monthName}</p>
-                         </div>
-                      </div>
-                      <div className="text-right">
-                         <p className={`text-sm font-black tracking-tighter ${data.value > 0 ? 'text-rose-500' : 'text-slate-300'}`}>
-                           {formatCurrency(data.value)}
-                         </p>
-                      </div>
-                   </div>
-                 ))}
+              <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
+                 {yearlyMonthlyData.map((data) => {
+                   const isExpanded = expandedMonth === data.monthIndex;
+                   return (
+                     <div key={data.monthIndex} className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden transition-all duration-300">
+                        <div 
+                          onClick={() => toggleMonth(data.monthIndex)}
+                          className="p-4 flex items-center justify-between cursor-pointer active:bg-slate-100 dark:active:bg-slate-800 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm">
+                                <Calendar size={14} className="text-slate-400" />
+                             </div>
+                             <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mês {data.monthIndex + 1}</p>
+                                <p className="text-xs font-black text-slate-900 dark:text-white capitalize leading-none">{data.monthName}</p>
+                             </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                             <p className={`text-sm font-black tracking-tighter ${data.value > 0 ? 'text-rose-500' : 'text-slate-300'}`}>
+                               {formatCurrency(data.value)}
+                             </p>
+                             <div className="text-slate-400">
+                               {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                             </div>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+                             {data.items.length > 0 ? (
+                               data.items.map(t => (
+                                 <div key={t.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                                    <div>
+                                       <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                                       <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                         {new Date(t.date).toLocaleDateString('pt-BR')}
+                                       </p>
+                                    </div>
+                                    <p className="text-xs font-black text-rose-500">
+                                       {formatCurrency(t.amount)}
+                                    </p>
+                                 </div>
+                               ))
+                             ) : (
+                               <p className="text-center py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest italic">
+                                 Nenhum gasto registrado
+                               </p>
+                             )}
+                          </div>
+                        )}
+                     </div>
+                   );
+                 })}
               </div>
               
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-2 shrink-0">
                  <div className="flex justify-between items-center px-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Acumulado Ano</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Acumulado</span>
                     <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">
                        {formatCurrency(yearlyMonthlyData.reduce((a, b) => a + b.value, 0))}
                     </span>
