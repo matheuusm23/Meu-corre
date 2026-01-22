@@ -14,6 +14,8 @@ import { Auth } from './components/Auth';
 import { Sidebar } from './components/ui/Sidebar';
 import { Transaction, GoalSettings, ViewMode, FixedExpense, CreditCard, WorkSchedule, UserProfile, PlannedMaintenance } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 type Theme = 'light' | 'dark';
 
@@ -30,16 +32,30 @@ const DEFAULT_SCHEDULE: WorkSchedule = {
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   
   // Auth state
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('userProfile');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const saved = localStorage.getItem('isLoggedIn');
-    return saved === 'true';
-  });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Sync auth state with Firebase
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserProfile({
+          name: user.displayName || 'Parceiro',
+          login: user.email || ''
+        });
+        setIsLoggedIn(true);
+      } else {
+        setUserProfile(null);
+        setIsLoggedIn(false);
+      }
+      setIsAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const touchStartRef = useRef<number | null>(null);
   const swipeThreshold = 50;
@@ -71,17 +87,20 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const savedTx = localStorage.getItem('transactions');
-    const savedGoals = localStorage.getItem('goalSettings');
-    const savedFixed = localStorage.getItem('fixedExpenses');
-    const savedCards = localStorage.getItem('creditCards');
-    const savedSchedule = localStorage.getItem('workSchedule');
-    const savedMaintenance = localStorage.getItem('plannedMaintenances');
+    if (!isLoggedIn) return; // Only load data if logged in
     
-    if (savedTx) setTransactions(JSON.parse(savedTx));
-    if (savedFixed) setFixedExpenses(JSON.parse(savedFixed));
-    if (savedCards) setCreditCards(JSON.parse(savedCards));
-    if (savedMaintenance) setPlannedMaintenances(JSON.parse(savedMaintenance));
+    const prefix = auth.currentUser?.uid || 'default';
+    const savedTx = localStorage.getItem(`${prefix}_transactions`);
+    const savedGoals = localStorage.getItem(`${prefix}_goalSettings`);
+    const savedFixed = localStorage.getItem(`${prefix}_fixedExpenses`);
+    const savedCards = localStorage.getItem(`${prefix}_creditCards`);
+    const savedSchedule = localStorage.getItem(`${prefix}_workSchedule`);
+    const savedMaintenance = localStorage.getItem(`${prefix}_plannedMaintenances`);
+    
+    if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions([]);
+    if (savedFixed) setFixedExpenses(JSON.parse(savedFixed)); else setFixedExpenses([]);
+    if (savedCards) setCreditCards(JSON.parse(savedCards)); else setCreditCards([]);
+    if (savedMaintenance) setPlannedMaintenances(JSON.parse(savedMaintenance)); else setPlannedMaintenances([]);
     
     if (savedSchedule) {
       const parsed: any = JSON.parse(savedSchedule);
@@ -102,6 +121,8 @@ const App: React.FC = () => {
         }
       });
       setWorkSchedule(migratedSchedule);
+    } else {
+      setWorkSchedule(DEFAULT_SCHEDULE);
     }
 
     if (savedGoals) {
@@ -115,17 +136,55 @@ const App: React.FC = () => {
         savingsAdjustments: parsed.savingsAdjustments || {},
         savingsWithdrawals: parsed.savingsWithdrawals || {}
       });
+    } else {
+      setGoalSettings({
+        monthlyGoal: 3000, 
+        monthlyGoals: {}, 
+        daysOff: [],
+        startDayOfMonth: 1,
+        dailySavingTarget: 0,
+        savingsDates: [],
+        savingsAdjustments: {},
+        savingsWithdrawals: {}
+      });
     }
-  }, []);
+  }, [isLoggedIn]);
 
-  useEffect(() => { localStorage.setItem('transactions', JSON.stringify(transactions)); }, [transactions]);
-  useEffect(() => { localStorage.setItem('goalSettings', JSON.stringify(goalSettings)); }, [goalSettings]);
-  useEffect(() => { localStorage.setItem('fixedExpenses', JSON.stringify(fixedExpenses)); }, [fixedExpenses]);
-  useEffect(() => { localStorage.setItem('creditCards', JSON.stringify(creditCards)); }, [creditCards]);
-  useEffect(() => { localStorage.setItem('workSchedule', JSON.stringify(workSchedule)); }, [workSchedule]);
-  useEffect(() => { localStorage.setItem('plannedMaintenances', JSON.stringify(plannedMaintenances)); }, [plannedMaintenances]);
-  useEffect(() => { localStorage.setItem('userProfile', JSON.stringify(userProfile)); }, [userProfile]);
-  useEffect(() => { localStorage.setItem('isLoggedIn', String(isLoggedIn)); }, [isLoggedIn]);
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_transactions`, JSON.stringify(transactions)); 
+  }, [transactions, isLoggedIn]);
+  
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_goalSettings`, JSON.stringify(goalSettings)); 
+  }, [goalSettings, isLoggedIn]);
+  
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_fixedExpenses`, JSON.stringify(fixedExpenses)); 
+  }, [fixedExpenses, isLoggedIn]);
+  
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_creditCards`, JSON.stringify(creditCards)); 
+  }, [creditCards, isLoggedIn]);
+  
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_workSchedule`, JSON.stringify(workSchedule)); 
+  }, [workSchedule, isLoggedIn]);
+  
+  useEffect(() => { 
+    if (!isLoggedIn) return;
+    const prefix = auth.currentUser?.uid || 'default';
+    localStorage.setItem(`${prefix}_plannedMaintenances`, JSON.stringify(plannedMaintenances)); 
+  }, [plannedMaintenances, isLoggedIn]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -145,8 +204,14 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setIsLoggedIn(false);
+      setUserProfile(null);
+    } catch (err) {
+      console.error("Erro ao sair:", err);
+    }
   };
 
   const handleAddTransaction = (t: Transaction) => setTransactions(prev => [...prev, t]);
@@ -163,15 +228,20 @@ const App: React.FC = () => {
   };
 
   const handleClearData = () => {
+    const prefix = auth.currentUser?.uid || 'default';
     setTransactions([]);
     setFixedExpenses([]);
     setCreditCards([]);
     setPlannedMaintenances([]);
     setWorkSchedule(DEFAULT_SCHEDULE);
     setGoalSettings({ monthlyGoal: 0, monthlyGoals: {}, daysOff: [], startDayOfMonth: 1, dailySavingTarget: 0, savingsDates: [], savingsAdjustments: {}, savingsWithdrawals: {} });
-    setUserProfile(null);
-    setIsLoggedIn(false);
-    localStorage.clear();
+    
+    localStorage.removeItem(`${prefix}_transactions`);
+    localStorage.removeItem(`${prefix}_goalSettings`);
+    localStorage.removeItem(`${prefix}_fixedExpenses`);
+    localStorage.removeItem(`${prefix}_creditCards`);
+    localStorage.removeItem(`${prefix}_workSchedule`);
+    localStorage.removeItem(`${prefix}_plannedMaintenances`);
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -194,8 +264,19 @@ const App: React.FC = () => {
 
   const onTouchEnd = () => { touchStartRef.current = null; };
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+          <p className="text-emerald-500 font-black uppercase text-[10px] tracking-widest">Carregando corre...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoggedIn) {
-    return <Auth onLogin={handleLogin} existingProfile={userProfile} />;
+    return <Auth onLogin={handleLogin} existingProfile={null} />;
   }
 
   return (
