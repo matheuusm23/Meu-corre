@@ -1,13 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card } from './ui/Card';
-import { Trash2, Calendar, Edit2, Lock, X, Users, Activity, BarChart3, Smartphone, ChevronRight, CreditCard as CardIcon, Plus, CheckCircle2, Clock, Home, Info, Menu } from './Icons';
-import { GoalSettings, Transaction, CreditCard } from '../types';
+import { Trash2, Calendar, Edit2, Lock, X, Users, User, LogOut, Activity, BarChart3, Smartphone, ChevronRight, CreditCard as CardIcon, Plus, CheckCircle2, Clock, Home, Info, Menu } from './Icons';
+import { GoalSettings, Transaction, CreditCard, UserProfile } from '../types';
 import { getISODate, formatCurrency, getBillingPeriodRange } from '../utils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface SettingsProps {
   onClearData: () => void;
+  userProfile: UserProfile | null;
+  onUpdateProfile: (profile: UserProfile) => void;
+  onLogout: () => void;
   goalSettings: GoalSettings;
   onUpdateSettings: (settings: GoalSettings) => void;
   currentTheme: 'light' | 'dark';
@@ -21,13 +24,19 @@ interface SettingsProps {
 }
 
 export const Settings: React.FC<SettingsProps> = ({ 
-  onClearData, goalSettings, onUpdateSettings, currentTheme, onToggleTheme, transactions, creditCards, onAddCard, onUpdateCard, onDeleteCard, onOpenMenu
+  onClearData, userProfile, onUpdateProfile, onLogout, goalSettings, onUpdateSettings, currentTheme, onToggleTheme, transactions, creditCards, onAddCard, onUpdateCard, onDeleteCard, onOpenMenu
 }) => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [cardName, setCardName] = useState('');
   const [cardLimit, setCardLimit] = useState('');
   const [cardColor, setCardColor] = useState('#3b82f6');
+
+  // Perfil state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState(userProfile?.name || '');
+  const [profileLogin, setProfileLogin] = useState(userProfile?.login || '');
+  const [profilePassword, setProfilePassword] = useState(userProfile?.password || '');
 
   const resetCardForm = () => { setCardName(''); setCardLimit(''); setEditingCardId(null); setShowCardForm(false); };
 
@@ -37,6 +46,16 @@ export const Settings: React.FC<SettingsProps> = ({
     const cardData: CreditCard = { id: editingCardId || uuidv4(), name: cardName, color: cardColor, limit: parseFloat(cardLimit) || 0 };
     if (editingCardId) onUpdateCard(cardData); else onAddCard(cardData);
     resetCardForm();
+  };
+
+  const handleUpdateProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateProfile({
+      name: profileName,
+      login: profileLogin,
+      password: profilePassword
+    });
+    setIsEditingProfile(false);
   };
 
   return (
@@ -54,12 +73,54 @@ export const Settings: React.FC<SettingsProps> = ({
         </button>
       </header>
 
+      {/* SEÇÃO PERFIL */}
+      <section className="px-1">
+         <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Seu Perfil</h3>
+         <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md space-y-4">
+            {isEditingProfile ? (
+               <form onSubmit={handleUpdateProfile} className="space-y-3">
+                  <div className="space-y-1">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Nome Completo</span>
+                    <input type="text" value={profileName} onChange={e => setProfileName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border-none shadow-inner" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Login</span>
+                    <input type="text" value={profileLogin} onChange={e => setProfileLogin(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border-none shadow-inner" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-1">Nova Senha</span>
+                    <input type="password" value={profilePassword} onChange={e => setProfilePassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border-none shadow-inner" />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button type="submit" className="flex-1 py-3 bg-emerald-500 text-white rounded-xl font-black text-xs shadow-lg">Salvar Perfil</button>
+                    <button type="button" onClick={() => setIsEditingProfile(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-black text-xs">Cancelar</button>
+                  </div>
+               </form>
+            ) : (
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <User size={24} />
+                     </div>
+                     <div>
+                        <p className="text-sm font-black dark:text-white tracking-tight leading-none mb-1">{userProfile?.name}</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{userProfile?.login}</p>
+                     </div>
+                  </div>
+                  <button onClick={() => setIsEditingProfile(true)} className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-lg">
+                    <Edit2 size={16} />
+                  </button>
+               </div>
+            )}
+         </div>
+      </section>
+
       {/* SEÇÃO APARÊNCIA COMPACTA */}
       <section className="px-1">
          <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2">Visual</h3>
          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-md flex items-center justify-between">
             <div className="flex items-center gap-3">
-               <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl flex items-center justify-center shadow-inner"><Edit2 size={20}/></div>
+               <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 rounded-xl flex items-center justify-center shadow-inner"><Activity size={20}/></div>
                <div>
                   <p className="text-sm font-black dark:text-white leading-tight">Modo Escuro</p>
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">Economia de bateria</p>
@@ -118,10 +179,13 @@ export const Settings: React.FC<SettingsProps> = ({
          </div>
       </section>
 
-      {/* SEÇÃO RESET COMPACTA */}
-      <section className="px-1 mt-2">
+      {/* SEÇÃO SESSÃO */}
+      <section className="px-1 mt-2 flex flex-col gap-3">
+         <button onClick={onLogout} className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 shadow-sm">
+            <LogOut size={16} /> Sair da Conta
+         </button>
          <button onClick={onClearData} className="w-full py-4 bg-rose-50 text-rose-600 dark:bg-rose-950/20 rounded-[1.5rem] font-black text-xs border border-rose-100 dark:border-rose-900 flex items-center justify-center gap-2 shadow-sm">
-            <Trash2 size={16} /> Limpar Dados
+            <Trash2 size={16} /> Limpar Todos os Dados
          </button>
       </section>
 

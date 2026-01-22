@@ -26,6 +26,8 @@ import {
   CreditCard, 
   Lock, 
   Users, 
+  User,
+  LogOut,
   Activity, 
   BarChart3, 
   Smartphone, 
@@ -39,9 +41,7 @@ import {
   MapPin,
   Menu,
   RefreshCw,
-  // Fix: Added Filter to imports from lucide-react
   Filter,
-  // Fix: Added Search to imports from lucide-react
   Search
 } from 'lucide-react';
 
@@ -71,6 +71,8 @@ export {
   CreditCard, 
   Lock, 
   Users, 
+  User,
+  LogOut,
   Activity, 
   BarChart3, 
   Smartphone, 
@@ -84,8 +86,6 @@ export {
   MapPin,
   Menu,
   RefreshCw,
-  // Fix: Added Filter to exported icons
   Filter,
-  // Fix: Added Search to exported icons
   Search
 };

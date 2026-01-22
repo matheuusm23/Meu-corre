@@ -1,6 +1,12 @@
 
 export type TransactionType = 'income' | 'expense';
 
+export interface UserProfile {
+  name: string;
+  login: string;
+  password?: string;
+}
+
 export interface Transaction {
   id: string;
   amount: number;

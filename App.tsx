@@ -9,8 +9,9 @@ import { WorkSchedule as WorkScheduleComp } from './components/WorkSchedule';
 import { FuelAnalysis } from './components/FuelAnalysis';
 import { FullHistory } from './components/FullHistory';
 import { YearlySummary } from './components/YearlySummary';
+import { Auth } from './components/Auth';
 import { Sidebar } from './components/ui/Sidebar';
-import { Transaction, GoalSettings, ViewMode, FixedExpense, CreditCard, WorkSchedule } from './types';
+import { Transaction, GoalSettings, ViewMode, FixedExpense, CreditCard, WorkSchedule, UserProfile } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 type Theme = 'light' | 'dark';
@@ -29,6 +30,16 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('home');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
+  // Auth state
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    const saved = localStorage.getItem('userProfile');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const saved = localStorage.getItem('isLoggedIn');
+    return saved === 'true';
+  });
+
   const touchStartRef = useRef<number | null>(null);
   const swipeThreshold = 50;
   const edgeThreshold = 40;
@@ -108,6 +119,8 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('fixedExpenses', JSON.stringify(fixedExpenses)); }, [fixedExpenses]);
   useEffect(() => { localStorage.setItem('creditCards', JSON.stringify(creditCards)); }, [creditCards]);
   useEffect(() => { localStorage.setItem('workSchedule', JSON.stringify(workSchedule)); }, [workSchedule]);
+  useEffect(() => { localStorage.setItem('userProfile', JSON.stringify(userProfile)); }, [userProfile]);
+  useEffect(() => { localStorage.setItem('isLoggedIn', String(isLoggedIn)); }, [isLoggedIn]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -117,6 +130,15 @@ const App: React.FC = () => {
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
+  const handleLogin = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
 
   const handleAddTransaction = (t: Transaction) => setTransactions(prev => [...prev, t]);
   const handleUpdateTransaction = (updatedT: Transaction) => setTransactions(prev => prev.map(t => t.id === updatedT.id ? updatedT : t));
@@ -137,6 +159,8 @@ const App: React.FC = () => {
     setCreditCards([]);
     setWorkSchedule(DEFAULT_SCHEDULE);
     setGoalSettings({ monthlyGoal: 0, monthlyGoals: {}, daysOff: [], startDayOfMonth: 1, dailySavingTarget: 0, savingsDates: [], savingsAdjustments: {}, savingsWithdrawals: {} });
+    setUserProfile(null);
+    setIsLoggedIn(false);
     localStorage.clear();
   };
 
@@ -160,16 +184,20 @@ const App: React.FC = () => {
 
   const onTouchEnd = () => { touchStartRef.current = null; };
 
+  if (!isLoggedIn) {
+    return <Auth onLogin={handleLogin} existingProfile={userProfile} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-amber-500/30 transition-colors duration-300" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} currentView={currentView} onChangeView={setCurrentView} />
       <main className="max-w-lg mx-auto min-h-screen">
-        {currentView === 'home' && <Dashboard transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} />}
+        {currentView === 'home' && <Dashboard userProfile={userProfile} transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} />}
         {currentView === 'goals' && <div className="px-4"><Goals goalSettings={goalSettings} transactions={transactions} onUpdateSettings={setGoalSettings} fixedExpenses={fixedExpenses} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'yearly-goals' && <div className="px-4"><YearlyGoals goalSettings={goalSettings} onUpdateSettings={setGoalSettings} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'schedule' && <div className="px-4"><WorkScheduleComp workSchedule={workSchedule} onUpdateSchedule={setWorkSchedule} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'fixed-expenses' && <div className="px-4"><FixedExpenses fixedExpenses={fixedExpenses} creditCards={creditCards} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddExpense={handleAddFixedExpense} onUpdateExpense={handleUpdateFixedExpense} onDeleteExpense={handleDeleteFixedExpense} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'settings' && <div className="px-4"><Settings onClearData={handleClearData} goalSettings={goalSettings} onUpdateSettings={setGoalSettings} currentTheme={theme} onToggleTheme={toggleTheme} transactions={transactions} creditCards={creditCards} onAddCard={handleAddCard} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onOpenMenu={toggleSidebar} /></div>}
+        {currentView === 'settings' && <div className="px-4"><Settings onClearData={handleClearData} userProfile={userProfile} onUpdateProfile={setUserProfile} onLogout={handleLogout} goalSettings={goalSettings} onUpdateSettings={setGoalSettings} currentTheme={theme} onToggleTheme={toggleTheme} transactions={transactions} creditCards={creditCards} onAddCard={handleAddCard} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'fuel-analysis' && <div className="px-4"><FuelAnalysis transactions={transactions} fixedExpenses={fixedExpenses} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'full-history' && <div className="px-4"><FullHistory transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
         {currentView === 'yearly-summary' && <div className="px-4"><YearlySummary transactions={transactions} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}

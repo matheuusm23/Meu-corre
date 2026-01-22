@@ -1,13 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card } from './ui/Card';
-import { Transaction, TransactionType, ViewMode, FixedExpense } from '../types';
+import { Transaction, TransactionType, ViewMode, FixedExpense, UserProfile } from '../types';
 import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull, getStartOfWeek } from '../utils';
 import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Calendar } from './Icons';
 import { Logo } from './ui/Logo';
 import { v4 as uuidv4 } from 'uuid';
 
 interface DashboardProps {
+  userProfile: UserProfile | null;
   transactions: Transaction[];
   fixedExpenses: FixedExpense[];
   startDayOfMonth: number;
@@ -23,6 +24,7 @@ const DELIVERY_APPS = ['iFood', '99', 'Rappi', 'Lalamove', 'Uber', 'Loggi', 'Bor
 const EXPENSE_CATEGORIES = ['Comida', 'Mercado', 'Gastos na rua', 'Combustível', 'Outros'];
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
+  userProfile,
   transactions, 
   fixedExpenses,
   startDayOfMonth,
@@ -117,14 +119,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transactions, today]);
 
-  // Cálculo do Saldo Livre Liquidado (Até Ontem) e Ganhos de Hoje
   const { settledMonthBalance, todayBalance } = useMemo(() => {
-    // Transações manuais de dias anteriores a hoje
     const settledManual = currentPeriodTransactions
       .filter(t => parseDateLocal(t.date) < today)
       .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
     
-    // Transações de HOJE
     const tBalance = currentPeriodTransactions
       .filter(t => isSameDay(parseDateLocal(t.date), today))
       .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
@@ -217,14 +216,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-12">
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-700 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-900 w-full pt-8 pb-10 px-6 flex flex-col gap-6 shadow-xl">
-        <header className="relative flex items-center justify-between z-10">
-          <Logo variant="light" />
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-700 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-900 w-full pt-8 pb-10 px-6 flex flex-col gap-12 shadow-xl">
+        <header className="relative flex items-center justify-between z-10 w-full h-10">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Bem-vindo</span>
+            <p className="text-sm font-black text-white leading-none tracking-tight">Olá, {userProfile?.name || 'Parceiro'}</p>
+          </div>
+          <div className="absolute left-1/2 -translate-x-1/2">
+             <Logo variant="light" showEmoji={false} size="sm" />
+          </div>
           <button 
             onClick={onOpenMenu}
-            className="p-2.5 rounded-xl bg-white/10 text-white backdrop-blur-md border border-white/10 active:scale-90 transition-all"
+            className="p-2 rounded-xl bg-white/10 text-white backdrop-blur-md border border-white/10 active:scale-90 transition-all"
           >
-            <Menu size={24} />
+            <Menu size={20} />
           </button>
         </header>
 
@@ -244,7 +249,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
              <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg min-w-[130px]">
                 <span className="text-white text-[8px] font-black uppercase tracking-[0.15em] opacity-60">Saldo Livre</span>
                 <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(settledMonthBalance) : '••••'}</p>
-                {/* Prévia de ganhos de hoje conforme solicitado */}
                 {isBalanceVisible && todayBalance !== 0 && (
                   <div className="mt-1.5 flex flex-col items-start animate-in fade-in slide-in-from-top-1 duration-500">
                     <p className="text-[7px] text-emerald-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
