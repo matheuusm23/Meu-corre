@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card } from './ui/Card';
-import { Trash2, Calendar, Edit2, Lock, X, Users, User, LogOut, Activity, BarChart3, Smartphone, ChevronRight, CreditCard as CardIcon, Plus, CheckCircle2, Clock, Home, Info, Menu } from './Icons';
+import { Trash2, Calendar, Edit2, Lock, X, Users, User, LogOut, Activity, BarChart3, Smartphone, ChevronRight, CreditCard as CardIcon, Plus, CheckCircle2, Clock, Home, Info, Menu, AlertCircle } from './Icons';
 import { GoalSettings, Transaction, CreditCard, UserProfile } from '../types';
 import { getISODate, formatCurrency, getBillingPeriodRange } from '../utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,6 +27,7 @@ export const Settings: React.FC<SettingsProps> = ({
   onClearData, userProfile, onUpdateProfile, onLogout, goalSettings, onUpdateSettings, currentTheme, onToggleTheme, transactions, creditCards, onAddCard, onUpdateCard, onDeleteCard, onOpenMenu
 }) => {
   const [showCardForm, setShowCardForm] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [cardName, setCardName] = useState('');
   const [cardLimit, setCardLimit] = useState('');
@@ -56,6 +57,11 @@ export const Settings: React.FC<SettingsProps> = ({
       password: profilePassword
     });
     setIsEditingProfile(false);
+  };
+
+  const handleConfirmClear = () => {
+    onClearData();
+    setShowClearConfirm(false);
   };
 
   return (
@@ -184,10 +190,44 @@ export const Settings: React.FC<SettingsProps> = ({
          <button onClick={onLogout} className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[1.5rem] font-black text-xs border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 shadow-sm">
             <LogOut size={16} /> Sair da Conta
          </button>
-         <button onClick={onClearData} className="w-full py-4 bg-rose-50 text-rose-600 dark:bg-rose-950/20 rounded-[1.5rem] font-black text-xs border border-rose-100 dark:border-rose-900 flex items-center justify-center gap-2 shadow-sm">
+         <button onClick={() => setShowClearConfirm(true)} className="w-full py-4 bg-rose-50 text-rose-600 dark:bg-rose-950/20 rounded-[1.5rem] font-black text-xs border border-rose-100 dark:border-rose-900 flex items-center justify-center gap-2 shadow-sm">
             <Trash2 size={16} /> Limpar Todos os Dados
          </button>
       </section>
+
+      {/* MODAL DE CONFIRMAÇÃO DE LIMPEZA */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
+           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setShowClearConfirm(false)} />
+           <div className="relative bg-white dark:bg-slate-900 w-full max-w-sm p-8 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+              <div className="flex flex-col items-center text-center">
+                 <div className="w-20 h-20 bg-rose-50 dark:bg-rose-950/30 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <AlertCircle size={48} strokeWidth={2.5} />
+                 </div>
+                 <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter mb-3 leading-tight">
+                    Tem certeza absoluta?
+                 </h3>
+                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                    Esta ação irá <span className="text-rose-600 font-black">apagar permanentemente</span> todos os seus ganhos, metas, cartões e configurações. Não há como desfazer!
+                 </p>
+                 <div className="w-full space-y-3">
+                    <button 
+                       onClick={handleConfirmClear}
+                       className="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-rose-500/20 active:scale-[0.98] transition-all"
+                    >
+                       Sim, Limpar Tudo
+                    </button>
+                    <button 
+                       onClick={() => setShowClearConfirm(false)}
+                       className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-sm active:scale-[0.98] transition-all"
+                    >
+                       Cancelar e Manter Dados
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
 
       {showCardForm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
