@@ -17,7 +17,6 @@ interface AuthProps {
   existingProfile: UserProfile | null;
 }
 
-// Ícone do Google em SVG para consistência visual
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -33,29 +32,38 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isCriticalError, setIsCriticalError] = useState(false);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isSignup = mode === 'signup';
 
+  // Fix: Added missing toggleMode function to switch between login and signup
+  const toggleMode = () => setMode(prev => prev === 'login' ? 'signup' : 'login');
+
   const handleGoogleLogin = async () => {
     setError('');
-    setIsCriticalError(false);
+    setUnauthorizedDomain(null);
     setLoading(true);
+    
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
       await signInWithPopup(auth, provider);
-      // O onAuthStateChanged no App.tsx cuidará do redirecionamento
     } catch (err: any) {
-      console.error("Google Auth Error:", err);
-      let message = 'Erro ao entrar com Google';
-      if (err.code === 'auth/popup-closed-by-user') {
-        message = 'A janela de login foi fechada antes de completar.';
+      console.error("Google Auth Error:", err.code, err.message);
+      
+      if (err.code === 'auth/unauthorized-domain') {
+        const domain = window.location.hostname;
+        setError(`Este domínio (${domain}) não está autorizado no Firebase.`);
+        setUnauthorizedDomain(domain);
       } else if (err.code === 'auth/operation-not-allowed') {
-        message = 'O login com Google não está ativo no Firebase.';
-        setIsCriticalError(true);
+        setError('O login com Google não foi ativado no Console do Firebase.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Você fechou a janela do Google antes de terminar.');
+      } else {
+        setError('Falha ao conectar com Google. Verifique sua conexão.');
       }
-      setError(message);
     } finally {
       setLoading(false);
     }
@@ -64,66 +72,41 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsCriticalError(false);
+    setUnauthorizedDomain(null);
     setLoading(true);
 
     try {
       if (isSignup) {
-        if (!name || !email || !password) {
-          throw new Error('Preencha todos os campos para o cadastro');
-        }
+        if (!name || !email || !password) throw new Error('Preencha todos os campos');
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(userCredential.user, { displayName: name.trim() });
       } else {
-        if (!email || !password) {
-          throw new Error('Preencha login e senha');
-        }
+        if (!email || !password) throw new Error('Preencha e-mail e senha');
         await signInWithEmailAndPassword(auth, email.trim(), password);
       }
     } catch (err: any) {
-      console.error("Firebase Auth Error:", err.code, err.message);
-      let message = 'Ocorreu um erro na autenticação';
-      
-      if (err.code === 'auth/operation-not-allowed') {
-        message = 'O provedor de E-mail/Senha está desativado no Firebase.';
-        setIsCriticalError(true);
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        message = 'E-mail ou senha incorretos. Verifique e tente novamente.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        message = 'Este e-mail já está sendo usado por outra conta.';
-      } else if (err.code === 'auth/weak-password') {
-        message = 'A senha deve ter pelo menos 6 caracteres.';
-      } else if (err.code === 'auth/invalid-email') {
-        message = 'O formato do e-mail digitado é inválido.';
-      } else if (err.message) {
-        message = err.message;
-      }
-      
+      let message = 'Erro na autenticação';
+      if (err.code === 'auth/invalid-credential') message = 'E-mail ou senha incorretos.';
+      else if (err.code === 'auth/email-already-in-use') message = 'Este e-mail já está em uso.';
+      else if (err.code === 'auth/operation-not-allowed') message = 'Login por e-mail desativado no Firebase.';
+      else message = err.message;
       setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleMode = () => {
-    setMode(prev => prev === 'login' ? 'signup' : 'login');
-    setError('');
-    setIsCriticalError(false);
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-700">
+      <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="p-4 bg-emerald-500 rounded-[2rem] shadow-2xl shadow-emerald-500/20 mb-4">
+          <div className="p-4 bg-emerald-500 rounded-[2rem] shadow-2xl shadow-emerald-500/20 mb-4 animate-bounce">
             <Logo variant="light" size="lg" />
           </div>
           <h2 className="text-3xl font-black text-white tracking-tighter">
-            {isSignup ? 'Seja bem-vindo!' : 'Bom te ver de novo'}
+            {isSignup ? 'Começar o Corre' : 'Entrar no Corre'}
           </h2>
-          <p className="text-slate-400 text-sm font-medium">
-            {isSignup ? 'Crie sua conta para começar o seu controle' : 'Entre com seus dados para acessar o app'}
-          </p>
+          <p className="text-slate-400 text-sm font-medium">Use sua conta Google para acesso rápido</p>
         </div>
 
         <div className="space-y-4">
@@ -132,78 +115,59 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             disabled={loading}
             className="w-full py-4 bg-white hover:bg-slate-100 text-slate-900 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            <GoogleIcon />
+            {loading ? <RefreshCw size={20} className="animate-spin text-emerald-500" /> : <GoogleIcon />}
             Entrar com Google
           </button>
 
           <div className="flex items-center gap-4 px-2">
             <div className="h-[1px] flex-1 bg-slate-800" />
-            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ou use seu e-mail</span>
+            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ou e-mail</span>
             <div className="h-[1px] flex-1 bg-slate-800" />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignup && (
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-500 transition-colors">
-                  <User size={20} />
-                </div>
-                <input
-                  type="text"
-                  value={name}
-                  disabled={loading}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome (ex: Matheus)"
-                  className="w-full bg-slate-900 border border-slate-800 p-4 pl-12 rounded-2xl text-white font-black text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all disabled:opacity-50"
-                />
-              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Seu nome"
+                className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              />
             )}
-
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-500 transition-colors">
-                <User size={20} />
-              </div>
-              <input
-                type="email"
-                value={email}
-                disabled={loading}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Seu e-mail"
-                className="w-full bg-slate-900 border border-slate-800 p-4 pl-12 rounded-2xl text-white font-black text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all disabled:opacity-50"
-              />
-            </div>
-
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-500 transition-colors">
-                <Lock size={20} />
-              </div>
-              <input
-                type="password"
-                value={password}
-                disabled={loading}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha"
-                className="w-full bg-slate-900 border border-slate-800 p-4 pl-12 rounded-2xl text-white font-black text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all disabled:opacity-50"
-              />
-            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="E-mail"
+              className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Senha"
+              className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            />
 
             {error && (
-              <div className={`p-4 rounded-xl flex flex-col gap-3 animate-in slide-in-from-top-2 duration-300 ${isCriticalError ? 'bg-rose-500/20 border border-rose-500/30' : 'bg-rose-500/10 border border-rose-500/20'}`}>
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2 text-rose-500 font-black uppercase text-[10px] tracking-widest">
                   <AlertCircle size={14} /> Atenção
                 </div>
-                <p className="text-rose-400 text-xs font-medium leading-relaxed">{error}</p>
+                <p className="text-rose-400 text-xs font-medium">{error}</p>
                 
-                {isCriticalError && (
-                  <div className="mt-2 p-3 bg-black/40 rounded-lg space-y-2 border border-rose-500/20">
-                    <p className="text-[10px] text-white font-black uppercase tracking-tight flex items-center gap-1">
-                      <Info size={12} className="text-emerald-500" /> Como resolver:
+                {unauthorizedDomain && (
+                  <div className="p-3 bg-black/40 rounded-xl space-y-2 border border-rose-500/30">
+                    <p className="text-[10px] text-white font-black uppercase flex items-center gap-1">
+                      <Info size={12} className="text-emerald-500" /> Resolver Agora:
                     </p>
-                    <ol className="text-[10px] text-slate-300 space-y-1 list-decimal list-inside font-medium">
-                      <li>Acesse o Console do Firebase</li>
-                      <li>Vá em Authentication &gt; Sign-in method</li>
-                      <li>Ative o provedor solicitado (E-mail ou Google)</li>
-                    </ol>
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      Vá em <b>Authentication > Settings > Authorized domains</b> no Firebase e adicione:
+                    </p>
+                    <code className="block bg-slate-800 p-2 rounded text-emerald-400 font-mono text-[11px] break-all">
+                      {unauthorizedDomain}
+                    </code>
                   </div>
                 )}
               </div>
@@ -212,33 +176,19 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
             >
-              {loading ? (
-                <RefreshCw size={18} className="animate-spin" />
-              ) : (
-                <>
-                  {isSignup ? 'Criar minha conta' : 'Entrar no sistema'}
-                  <ChevronRight size={18} />
-                </>
-              )}
+              {isSignup ? 'Criar Conta' : 'Entrar'}
             </button>
           </form>
         </div>
 
-        <div className="pt-2 flex flex-col items-center gap-6">
-          <button 
-            onClick={toggleMode}
-            disabled={loading}
-            className="text-emerald-500 text-xs font-black uppercase tracking-widest hover:text-emerald-400 transition-colors disabled:opacity-50"
-          >
-            {isSignup ? 'Já possui um cadastro? Faça login' : 'Novo por aqui? Criar uma conta gratuita'}
-          </button>
-
-          <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-60">
-            <CheckCircle2 size={12} className="text-emerald-500" /> Autenticação Firebase Segura
-          </div>
-        </div>
+        <button 
+          onClick={toggleMode}
+          className="w-full text-emerald-500 text-xs font-black uppercase tracking-widest text-center"
+        >
+          {isSignup ? 'Já tenho conta' : 'Criar conta gratuita'}
+        </button>
       </div>
     </div>
   );
