@@ -6,6 +6,8 @@ import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODat
 import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Calendar, Wrench } from './Icons';
 import { Logo } from './ui/Logo';
 import { v4 as uuidv4 } from 'uuid';
+import { analyticsPromise } from '../lib/firebase';
+import { logEvent } from "firebase/analytics";
 
 interface DashboardProps {
   userProfile: UserProfile | null;
@@ -205,8 +207,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       date: date, 
       type,
     };
-    if (editingId) onUpdateTransaction(transactionData);
-    else onAddTransaction(transactionData);
+    if (editingId) {
+      onUpdateTransaction(transactionData);
+    } else {
+      onAddTransaction(transactionData);
+      // Track new transaction event
+      analyticsPromise.then(analytics => {
+        if (analytics) {
+          logEvent(analytics, 'add_transaction', {
+            type,
+            category: category || 'General',
+            value: parseFloat(amount)
+          });
+        }
+      });
+    }
     setShowForm(false);
   };
 

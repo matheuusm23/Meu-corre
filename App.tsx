@@ -60,6 +60,10 @@ const App: React.FC = () => {
           login: user.email || ''
         });
         setIsLoggedIn(true);
+        // Track login
+        analyticsPromise.then(analytics => {
+          if (analytics) logEvent(analytics, 'login', { method: 'firebase_auth' });
+        });
       } else {
         setUserProfile(null);
         setIsLoggedIn(false);
@@ -222,6 +226,10 @@ const App: React.FC = () => {
       await signOut(auth);
       setIsLoggedIn(false);
       setUserProfile(null);
+      // Track logout
+      analyticsPromise.then(analytics => {
+        if (analytics) logEvent(analytics, 'logout');
+      });
     } catch (err) {
       console.error("Erro ao sair:", err);
     }
