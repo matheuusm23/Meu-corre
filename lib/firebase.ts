@@ -10,7 +10,7 @@ const firebaseConfig = {
   storageBucket: "meu-corre-2.firebasestorage.app",
   messagingSenderId: "432036922384",
   appId: "1:432036922384:web:e6498953c72e0c17c8f695",
-  measurementId: "G-ZPXZ9ML0HG"
+  measurementId: "G-RZ7NM3Z26B"
 };
 
 const app = initializeApp(firebaseConfig);
