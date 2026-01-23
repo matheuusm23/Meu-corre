@@ -1,6 +1,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBVkLMJJSBYL64T_saLABmz1yDSfCzQ1i4",
@@ -14,3 +15,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Analytics pode não ser suportado em alguns ambientes (ex: SSR ou alguns modos privativos)
+export const analyticsPromise = isSupported().then(yes => yes ? getAnalytics(app) : null);

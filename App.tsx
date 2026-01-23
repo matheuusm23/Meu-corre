@@ -14,8 +14,9 @@ import { Auth } from './components/Auth';
 import { Sidebar } from './components/ui/Sidebar';
 import { Transaction, GoalSettings, ViewMode, FixedExpense, CreditCard, WorkSchedule, UserProfile, PlannedMaintenance } from './types';
 import { v4 as uuidv4 } from 'uuid';
-import { auth } from './lib/firebase';
+import { auth, analyticsPromise } from './lib/firebase';
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { logEvent } from "firebase/analytics";
 
 type Theme = 'light' | 'dark';
 
@@ -37,6 +38,18 @@ const App: React.FC = () => {
   // Auth state
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Analytics: Track screen changes
+  useEffect(() => {
+    analyticsPromise.then(analytics => {
+      if (analytics) {
+        logEvent(analytics, 'screen_view', {
+          firebase_screen: currentView,
+          firebase_screen_class: 'App'
+        });
+      }
+    });
+  }, [currentView]);
 
   // Sync auth state with Firebase
   useEffect(() => {
