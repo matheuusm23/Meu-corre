@@ -2,9 +2,9 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, FixedExpense, ViewMode } from '../types';
 import { formatCurrency, getISODate, parseDateLocal, getFixedExpensesForPeriod } from '../utils';
-// Added Receipt to the imported icons
 import { ChevronLeft, Calendar as CalIcon, Fuel, Info, Menu, X, Filter, TrendingDown, Clock, Search, Receipt } from './Icons';
 
+// Added missing FuelAnalysisProps interface definition.
 interface FuelAnalysisProps {
   transactions: Transaction[];
   fixedExpenses: FixedExpense[];
@@ -139,7 +139,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
             </button>
             <button 
               onClick={() => setQuickRange(1, null)}
-              className="flex flex-col items-center justify-center gap-1 py-3.5 px-2 bg-amber-500 rounded-2xl border border-amber-400 shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-white"
+              className="flex flex-col items-center justify-center gap-1 py-3.5 px-2 bg-amber-500 rounded-2xl border border-amber-400 dark:border-transparent shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-white"
             >
               <span className="text-[10px] font-black leading-none">Mês Atual</span>
               <span className="text-[8px] font-bold opacity-80 uppercase tracking-tighter">Inteiro</span>
@@ -179,7 +179,7 @@ export const FuelAnalysis: React.FC<FuelAnalysisProps> = ({
 
       {/* Banner de Resultado Visual */}
       <section className="px-2">
-        <div className="bg-slate-900 dark:bg-white p-8 rounded-[3rem] border border-slate-800 dark:border-slate-100 shadow-2xl relative overflow-hidden group">
+        <div className="bg-slate-900 dark:bg-white p-8 rounded-[3rem] border border-slate-800 dark:border-transparent shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full -mr-20 -mt-20 blur-3xl group-hover:scale-125 transition-transform duration-1000" />
           <div className="relative z-10 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-[2rem] bg-amber-500 text-white flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30">

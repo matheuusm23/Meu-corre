@@ -342,7 +342,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             icon={<Fuel size={14} className="text-amber-500" />} 
             onClick={() => onChangeView('fuel-analysis')}
             valueClassName="text-base" 
-            className="border-amber-100 dark:border-amber-900/30"
+            className="border-amber-100 dark:border-transparent"
           />
         </div>
 

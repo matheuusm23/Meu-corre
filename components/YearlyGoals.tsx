@@ -108,7 +108,7 @@ export const YearlyGoals: React.FC<YearlyGoalsProps> = ({ goalSettings, onUpdate
           key={d} 
           onClick={() => handleOpenEdit(date, dateStr)} 
           className={`relative w-full aspect-square rounded-xl flex flex-col items-center justify-center text-[10px] font-black transition-all border ${
-            isMarked ? 'bg-amber-500 border-amber-400 text-white shadow-md' : 
+            isMarked ? 'bg-amber-500 border-amber-400 dark:border-transparent text-white shadow-md' : 
             extra > 0 ? 'bg-blue-50 border-blue-100 text-blue-600 dark:bg-blue-900/20 shadow-sm' :
             withdrawal > 0 ? 'bg-rose-50 border-rose-100 text-rose-600 dark:bg-rose-900/20 shadow-sm' :
             'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 dark:text-slate-400'
@@ -140,7 +140,7 @@ export const YearlyGoals: React.FC<YearlyGoalsProps> = ({ goalSettings, onUpdate
       </header>
 
       <div className="px-2">
-         <div className="bg-gradient-to-br from-amber-600 to-amber-700 p-4 rounded-[1.75rem] border border-amber-400 shadow-xl">
+         <div className="bg-gradient-to-br from-amber-600 to-amber-700 p-4 rounded-[1.75rem] border border-amber-400 dark:border-transparent shadow-xl">
             <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em] block mb-2">Meta Diária de Reserva</span>
             <div className="flex items-center gap-3">
                <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-white"><Target size={18}/></div>
