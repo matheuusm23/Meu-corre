@@ -183,7 +183,7 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
     const isExpense = item.type === 'expense';
     const isPaid = item.isPaid;
     return (
-      <div key={`${item.id}-${item.occurrenceDate}`} className={`p-3 border rounded-2xl flex items-center justify-between group transition-all duration-300 shadow-sm ${isPaid ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-500/40' : (isExpense ? 'bg-white dark:bg-slate-900 border-rose-100' : 'bg-white dark:bg-slate-900 border-slate-100')}`}>
+      <div key={`${item.id}-${item.occurrenceDate}`} className={`border rounded-2xl flex items-center justify-between group transition-all duration-300 shadow-sm ${isPaid ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-500/40 dark:border-transparent' : (isExpense ? 'bg-white dark:bg-slate-900 border-rose-100 dark:border-transparent' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-transparent')}`}>
          <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => handleEditItem(item)}>
             <div className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center ${isPaid ? 'bg-emerald-500 text-white shadow-md' : (!isExpense ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600')}`}>
                {isPaid ? <CheckCircle2 size={16} /> : (!isExpense ? <TrendingUp size={16} /> : <Receipt size={16} />)}
@@ -253,7 +253,7 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
         </div>
       </header>
       <div className="px-2">
-         <div className="bg-slate-900 dark:bg-white p-5 rounded-[2.5rem] border border-slate-700 shadow-xl relative overflow-hidden">
+         <div className="bg-slate-900 dark:bg-white p-5 rounded-[2.5rem] border border-slate-700 dark:border-transparent shadow-xl relative overflow-hidden">
             <div className="grid grid-cols-2 gap-4 relative z-10">
                <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center shadow-inner"><TrendingDown size={18}/></div>
@@ -292,7 +292,7 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
          </div>
       </div>
       <div className="px-2 space-y-3 mt-1">
-         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-100 shadow-md">
+         <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-1.5 rounded-xl border border-slate-100 dark:border-transparent shadow-md">
             <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth()-1)))} className="p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg"><ChevronLeft size={16}/></button>
             <div className="text-center"><p className="text-[10px] font-black uppercase text-slate-900 dark:text-white tracking-widest">{['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][viewDate.getMonth()]} {viewDate.getFullYear()}</p></div>
             <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth()+1)))} className="p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg"><ChevronRight size={16}/></button>
