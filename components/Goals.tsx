@@ -55,8 +55,12 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
 
   // Usamos daysOff para marcar as folgas
   const daysOff = goalSettings.daysOff || [];
+  const todayStr = getISODate(new Date());
 
   const toggleDayOff = (dateStr: string) => {
+    // Impede alterar folgas de dias que já passaram
+    if (dateStr < todayStr) return;
+
     let newDaysOff = [...daysOff];
     if (newDaysOff.includes(dateStr)) {
       newDaysOff = newDaysOff.filter(d => d !== dateStr);
@@ -67,15 +71,20 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
     if (navigator.vibrate) navigator.vibrate(8);
   };
 
-  // Cálculo dos dias de trabalho: Total do ciclo menos as folgas selecionadas
-  const workDaysInCycle = useMemo(() => {
-    return daysInCycle.filter(d => !daysOff.includes(getISODate(d)));
-  }, [daysInCycle, daysOff]);
+  // Cálculo dos dias de trabalho RESTANTES: Do dia atual até o fim do ciclo
+  const futureWorkDaysInCycle = useMemo(() => {
+    return daysInCycle.filter(d => {
+      const dStr = getISODate(d);
+      // Só conta do dia atual em diante E se não for folga
+      return dStr >= todayStr && !daysOff.includes(dStr);
+    });
+  }, [daysInCycle, daysOff, todayStr]);
 
   const dailyTargetNeeded = useMemo(() => {
-    if (workDaysInCycle.length === 0) return 0;
-    return netFixedGoal / workDaysInCycle.length;
-  }, [netFixedGoal, workDaysInCycle]);
+    if (futureWorkDaysInCycle.length === 0) return 0;
+    // O valor que falta ser pago dividido pelos dias de trabalho que ainda restam
+    return remainingToGoal / futureWorkDaysInCycle.length;
+  }, [remainingToGoal, futureWorkDaysInCycle]);
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6 pb-28">
@@ -125,7 +134,7 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
         </div>
       </div>
 
-      {/* Cálculo da Diária Baseada na Escala */}
+      {/* Cálculo da Diária Baseada na Escala Restante */}
       <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 flex items-center justify-center border border-blue-100 dark:border-blue-800">
@@ -141,15 +150,15 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
         
         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl flex items-center gap-4">
           <div className="flex-1">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dias de Trabalho</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Dias de Corre Restantes</p>
             <p className="text-sm font-black text-slate-700 dark:text-slate-300">
-              {workDaysInCycle.length} corre(s) no mês
+              {futureWorkDaysInCycle.length} dia(s) até o fim do ciclo
             </p>
           </div>
           <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-700" />
           <div className="flex-1 text-right">
-             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Fixas</p>
-             <p className="text-sm font-black text-blue-600">{formatCurrency(netFixedGoal)}</p>
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Falta Faturar</p>
+             <p className="text-sm font-black text-blue-600">{formatCurrency(remainingToGoal)}</p>
           </div>
         </div>
       </div>
@@ -174,21 +183,25 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
            {daysInCycle.map((day) => {
              const dateStr = getISODate(day);
              const isOff = daysOff.includes(dateStr);
-             const isToday = getISODate(new Date()) === dateStr;
+             const isToday = todayStr === dateStr;
+             const isPast = dateStr < todayStr;
              
              return (
                <button
                  key={dateStr}
+                 disabled={isPast}
                  onClick={() => toggleDayOff(dateStr)}
                  className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all relative border ${
-                   isOff 
-                     ? 'bg-rose-500 border-rose-400 text-white shadow-lg shadow-rose-500/20' 
-                     : 'bg-blue-50 dark:bg-slate-800 border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400'
+                   isPast 
+                     ? 'bg-slate-100 dark:bg-slate-900/50 border-slate-50 dark:border-slate-800 text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-40' 
+                     : isOff 
+                       ? 'bg-rose-500 border-rose-400 text-white shadow-lg shadow-rose-500/20' 
+                       : 'bg-blue-50 dark:bg-slate-800 border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400'
                  } ${isToday ? 'ring-2 ring-blue-400 ring-offset-2 dark:ring-offset-slate-950 scale-105 z-10' : ''}`}
                >
                  <span className="text-[10px] font-black">{day.getDate()}</span>
-                 {!isOff && <div className="absolute bottom-1 w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full" />}
-                 {isOff && <div className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />}
+                 {!isOff && !isPast && <div className="absolute bottom-1 w-1 h-1 bg-blue-600 dark:bg-blue-400 rounded-full" />}
+                 {isOff && !isPast && <div className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />}
                </button>
              );
            })}
@@ -197,18 +210,22 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
         <div className="mt-6 flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30">
            <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
            <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-             Marque no calendário acima os dias que você irá <span className="font-black text-rose-500">folgar</span>. Calculamos sua diária baseada nos dias restantes de trabalho para cobrir suas <span className="font-black text-blue-600">contas fixas</span>.
+             Marque as folgas dos dias que <span className="font-black text-blue-600">ainda virão</span>. O cálculo da diária considera o que falta faturar dividido pelos dias de trabalho restantes até o dia <span className="font-black text-slate-900 dark:text-white">{endDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>.
            </p>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-slate-800 rounded-xl">
               <div className="w-2 h-2 rounded-full bg-blue-600" />
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Trabalho</span>
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Trabalho</span>
            </div>
            <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-950/20 rounded-xl">
               <div className="w-2 h-2 rounded-full bg-rose-500" />
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Folga</span>
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Folga</span>
+           </div>
+           <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-900/40 rounded-xl">
+              <div className="w-2 h-2 rounded-full bg-slate-300" />
+              <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">Passado</span>
            </div>
         </div>
       </div>
