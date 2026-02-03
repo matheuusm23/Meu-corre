@@ -57,6 +57,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return manualIncomes + receivedFixedIncomes;
   }, [currentPeriodTransactions, fixedExpenses, startDate, endDate]);
 
+  const monthNetBalance = useMemo(() => {
+    // Ganhos totais (manuais + fixos pagos)
+    const totalIncomes = monthGrossIncome;
+    
+    // Gastos manuais no período
+    const manualExpenses = currentPeriodTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    
+    // Gastos fixos pagos no período
+    const relevantFixed = getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
+    const paidFixedExpenses = relevantFixed.filter(e => e.type === 'expense' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
+    
+    return totalIncomes - (manualExpenses + paidFixedExpenses);
+  }, [monthGrossIncome, currentPeriodTransactions, fixedExpenses, startDate, endDate]);
+
   const fuelTotal = useMemo(() => {
     // Gastos manuais com combustível no período
     const manualFuel = currentPeriodTransactions.filter(t => {
@@ -135,10 +149,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="relative flex items-center justify-between z-10">
           <div className="flex flex-col gap-1">
-            <span className="text-blue-100/50 text-[9px] font-black uppercase tracking-[0.2em]">Faturamento Mês</span>
+            <span className="text-blue-100/50 text-[9px] font-black uppercase tracking-[0.2em]">Saldo da conta</span>
             <div className="flex items-baseline gap-2">
               <span className="text-white text-3xl font-black tracking-tighter">
-                {isBalanceVisible ? formatCurrency(monthGrossIncome) : 'R$ ••••••'}
+                {isBalanceVisible ? formatCurrency(monthNetBalance) : 'R$ ••••••'}
               </span>
               <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="bg-white/10 backdrop-blur-md p-1.5 rounded-xl text-blue-300">
                 {isBalanceVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -152,7 +166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         
         {/* Grid de Resumo */}
         <div className="grid grid-cols-1 gap-3">
-          {/* Faturamento Bruto do Ciclo (Novo Card) */}
+          {/* Faturamento Bruto do Ciclo (Manter Card com Bruto para Transparência) */}
           <div 
             onClick={() => onChangeView('full-history')}
             className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-blue-100 dark:border-slate-800 shadow-lg flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
