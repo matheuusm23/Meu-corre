@@ -42,7 +42,10 @@ import {
   Menu,
   RefreshCw,
   Filter,
-  Search
+  Search,
+  // Added Moon and Sun icons
+  Moon,
+  Sun
 } from 'lucide-react';
 
 export { 
@@ -87,5 +90,8 @@ export {
   Menu,
   RefreshCw,
   Filter,
-  Search
+  Search,
+  // Exported Moon and Sun icons
+  Moon,
+  Sun
 };

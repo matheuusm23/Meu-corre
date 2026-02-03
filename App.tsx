@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { Goals } from './components/Goals';
 import { Settings } from './components/Settings';
@@ -32,24 +32,12 @@ const DEFAULT_SCHEDULE: WorkSchedule = {
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>('home');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Auth state
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // Analytics: Track screen changes
-  useEffect(() => {
-    analyticsPromise.then(analytics => {
-      if (analytics) {
-        logEvent(analytics, 'screen_view', {
-          firebase_screen: currentView,
-          firebase_screen_class: 'App'
-        });
-      }
-    });
-  }, [currentView]);
 
   // Sync auth state with Firebase
   useEffect(() => {
@@ -60,10 +48,6 @@ const App: React.FC = () => {
           login: user.email || ''
         });
         setIsLoggedIn(true);
-        // Track login
-        analyticsPromise.then(analytics => {
-          if (analytics) logEvent(analytics, 'login', { method: 'firebase_auth' });
-        });
       } else {
         setUserProfile(null);
         setIsLoggedIn(false);
@@ -74,17 +58,14 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const touchStartRef = useRef<number | null>(null);
-  const swipeThreshold = 50;
-  const edgeThreshold = 40;
-
+  // Theme Logic: Default to Light, Persist User Choice
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') as Theme;
       if (savedTheme) return savedTheme;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return 'light'; // Abre automático no moto claro
     }
-    return 'light'; // Padrão agora é light por causa da tela de login
+    return 'light';
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -104,8 +85,7 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!isLoggedIn) return; // Only load data if logged in
-    
+    if (!isLoggedIn) return;
     const prefix = auth.currentUser?.uid || 'default';
     const savedTx = localStorage.getItem(`${prefix}_transactions`);
     const savedGoals = localStorage.getItem(`${prefix}_goalSettings`);
@@ -114,94 +94,24 @@ const App: React.FC = () => {
     const savedSchedule = localStorage.getItem(`${prefix}_workSchedule`);
     const savedMaintenance = localStorage.getItem(`${prefix}_plannedMaintenances`);
     
-    if (savedTx) setTransactions(JSON.parse(savedTx)); else setTransactions([]);
-    if (savedFixed) setFixedExpenses(JSON.parse(savedFixed)); else setFixedExpenses([]);
-    if (savedCards) setCreditCards(JSON.parse(savedCards)); else setCreditCards([]);
-    if (savedMaintenance) setPlannedMaintenances(JSON.parse(savedMaintenance)); else setPlannedMaintenances([]);
-    
-    if (savedSchedule) {
-      const parsed: any = JSON.parse(savedSchedule);
-      const migratedSchedule: WorkSchedule = { ...DEFAULT_SCHEDULE };
-      Object.keys(parsed).forEach(day => {
-        if (parsed[day].shifts) {
-          migratedSchedule[day] = parsed[day];
-        } else if (parsed[day].startTime) {
-          migratedSchedule[day] = {
-            isWorkDay: parsed[day].isWorkDay,
-            shifts: [{ 
-              id: uuidv4(), 
-              startTime: parsed[day].startTime, 
-              endTime: parsed[day].endTime, 
-              location: parsed[day].location || '' 
-            }]
-          };
-        }
-      });
-      setWorkSchedule(migratedSchedule);
-    } else {
-      setWorkSchedule(DEFAULT_SCHEDULE);
-    }
-
-    if (savedGoals) {
-      const parsed = JSON.parse(savedGoals);
-      setGoalSettings({
-        ...parsed,
-        monthlyGoals: parsed.monthlyGoals || {}, 
-        startDayOfMonth: parsed.startDayOfMonth || 1,
-        dailySavingTarget: parsed.dailySavingTarget || 0,
-        savingsDates: parsed.savingsDates || [],
-        savingsAdjustments: parsed.savingsAdjustments || {},
-        savingsWithdrawals: parsed.savingsWithdrawals || {}
-      });
-    } else {
-      setGoalSettings({
-        monthlyGoal: 3000, 
-        monthlyGoals: {}, 
-        daysOff: [],
-        startDayOfMonth: 1,
-        dailySavingTarget: 0,
-        savingsDates: [],
-        savingsAdjustments: {},
-        savingsWithdrawals: {}
-      });
-    }
+    if (savedTx) setTransactions(JSON.parse(savedTx));
+    if (savedFixed) setFixedExpenses(JSON.parse(savedFixed));
+    if (savedCards) setCreditCards(JSON.parse(savedCards));
+    if (savedMaintenance) setPlannedMaintenances(JSON.parse(savedMaintenance));
+    if (savedSchedule) setWorkSchedule(JSON.parse(savedSchedule));
+    if (savedGoals) setGoalSettings(JSON.parse(savedGoals));
   }, [isLoggedIn]);
 
   useEffect(() => { 
     if (!isLoggedIn) return;
     const prefix = auth.currentUser?.uid || 'default';
     localStorage.setItem(`${prefix}_transactions`, JSON.stringify(transactions)); 
-  }, [transactions, isLoggedIn]);
-  
-  useEffect(() => { 
-    if (!isLoggedIn) return;
-    const prefix = auth.currentUser?.uid || 'default';
     localStorage.setItem(`${prefix}_goalSettings`, JSON.stringify(goalSettings)); 
-  }, [goalSettings, isLoggedIn]);
-  
-  useEffect(() => { 
-    if (!isLoggedIn) return;
-    const prefix = auth.currentUser?.uid || 'default';
     localStorage.setItem(`${prefix}_fixedExpenses`, JSON.stringify(fixedExpenses)); 
-  }, [fixedExpenses, isLoggedIn]);
-  
-  useEffect(() => { 
-    if (!isLoggedIn) return;
-    const prefix = auth.currentUser?.uid || 'default';
     localStorage.setItem(`${prefix}_creditCards`, JSON.stringify(creditCards)); 
-  }, [creditCards, isLoggedIn]);
-  
-  useEffect(() => { 
-    if (!isLoggedIn) return;
-    const prefix = auth.currentUser?.uid || 'default';
     localStorage.setItem(`${prefix}_workSchedule`, JSON.stringify(workSchedule)); 
-  }, [workSchedule, isLoggedIn]);
-  
-  useEffect(() => { 
-    if (!isLoggedIn) return;
-    const prefix = auth.currentUser?.uid || 'default';
-    localStorage.setItem(`${prefix}_plannedMaintenances`, JSON.stringify(plannedMaintenances)); 
-  }, [plannedMaintenances, isLoggedIn]);
+    localStorage.setItem(`${prefix}_plannedMaintenances`, JSON.stringify(plannedMaintenances));
+  }, [transactions, goalSettings, fixedExpenses, creditCards, workSchedule, plannedMaintenances, isLoggedIn]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -210,29 +120,13 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const hasPendingMaintenance = useMemo(() => {
-    return plannedMaintenances.some(m => !m.isDone);
-  }, [plannedMaintenances]);
+  const hasPendingMaintenance = useMemo(() => plannedMaintenances.some(m => !m.isDone), [plannedMaintenances]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
-  const handleLogin = (profile: UserProfile) => {
-    setUserProfile(profile);
-    setIsLoggedIn(true);
-  };
-
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setIsLoggedIn(false);
-      setUserProfile(null);
-      // Track logout
-      analyticsPromise.then(analytics => {
-        if (analytics) logEvent(analytics, 'logout');
-      });
-    } catch (err) {
-      console.error("Erro ao sair:", err);
-    }
+    await signOut(auth);
+    setIsLoggedIn(false);
   };
 
   const handleAddTransaction = (t: Transaction) => setTransactions(prev => [...prev, t]);
@@ -249,78 +143,45 @@ const App: React.FC = () => {
   };
 
   const handleClearData = () => {
-    const prefix = auth.currentUser?.uid || 'default';
     setTransactions([]);
     setFixedExpenses([]);
     setCreditCards([]);
     setPlannedMaintenances([]);
     setWorkSchedule(DEFAULT_SCHEDULE);
     setGoalSettings({ monthlyGoal: 0, monthlyGoals: {}, daysOff: [], startDayOfMonth: 1, dailySavingTarget: 0, savingsDates: [], savingsAdjustments: {}, savingsWithdrawals: {} });
-    
-    localStorage.removeItem(`${prefix}_transactions`);
-    localStorage.removeItem(`${prefix}_goalSettings`);
-    localStorage.removeItem(`${prefix}_fixedExpenses`);
-    localStorage.removeItem(`${prefix}_creditCards`);
-    localStorage.removeItem(`${prefix}_workSchedule`);
-    localStorage.removeItem(`${prefix}_plannedMaintenances`);
   };
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    const touchX = e.touches[0].clientX;
-    if (!isSidebarOpen && touchX > window.innerWidth - edgeThreshold) touchStartRef.current = touchX;
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartRef.current === null) return;
-    const currentTouchX = e.touches[0].clientX;
-    const diff = touchStartRef.current - currentTouchX;
-    if (diff > swipeThreshold) {
-      setIsSidebarOpen(true);
-      touchStartRef.current = null;
-      if (navigator.vibrate) navigator.vibrate(10);
-    }
-  };
-
-  const onTouchEnd = () => { touchStartRef.current = null; };
 
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-[#f8f9fa] dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-          <p className="text-blue-500 font-black uppercase text-[10px] tracking-widest">Carregando corre...</p>
-        </div>
+        <div className="w-8 h-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  if (!isLoggedIn) {
-    return <Auth onLogin={handleLogin} existingProfile={null} />;
-  }
+  if (!isLoggedIn) return <Auth onLogin={() => setIsLoggedIn(true)} existingProfile={null} />;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-blue-500/30 transition-colors duration-300" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      <main className="max-w-lg mx-auto min-h-screen">
+        {currentView === 'home' && <Dashboard userProfile={userProfile} transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'goals' && <Goals goalSettings={goalSettings} transactions={transactions} onUpdateSettings={setGoalSettings} fixedExpenses={fixedExpenses} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'yearly-goals' && <YearlyGoals goalSettings={goalSettings} onUpdateSettings={setGoalSettings} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'schedule' && <WorkScheduleComp workSchedule={workSchedule} onUpdateSchedule={setWorkSchedule} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'fixed-expenses' && <FixedExpenses fixedExpenses={fixedExpenses} creditCards={creditCards} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddExpense={handleAddFixedExpense} onUpdateExpense={handleUpdateFixedExpense} onDeleteExpense={handleDeleteFixedExpense} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'maintenance' && <Maintenance transactions={transactions} goalSettings={goalSettings} plannedMaintenances={plannedMaintenances} onUpdatePlanned={setPlannedMaintenances} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'settings' && <Settings onClearData={handleClearData} userProfile={userProfile} onUpdateProfile={setUserProfile} onLogout={handleLogout} goalSettings={goalSettings} onUpdateSettings={setGoalSettings} currentTheme={theme} onToggleTheme={toggleTheme} transactions={transactions} creditCards={creditCards} onAddCard={handleAddCard} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'fuel-analysis' && <FuelAnalysis transactions={transactions} fixedExpenses={fixedExpenses} onChangeView={setCurrentView} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'full-history' && <FullHistory transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={() => setIsSidebarOpen(true)} />}
+        {currentView === 'yearly-summary' && <YearlySummary transactions={transactions} onChangeView={setCurrentView} onOpenMenu={() => setIsSidebarOpen(true)} />}
+      </main>
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         currentView={currentView} 
-        onChangeView={setCurrentView} 
+        onChangeView={setCurrentView}
         hasPendingMaintenance={hasPendingMaintenance}
       />
-      <main className="max-w-lg mx-auto min-h-screen">
-        {currentView === 'home' && <Dashboard userProfile={userProfile} transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddTransaction={handleAddTransaction} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} />}
-        {currentView === 'goals' && <div className="px-4"><Goals goalSettings={goalSettings} transactions={transactions} onUpdateSettings={setGoalSettings} fixedExpenses={fixedExpenses} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'yearly-goals' && <div className="px-4"><YearlyGoals goalSettings={goalSettings} onUpdateSettings={setGoalSettings} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'schedule' && <div className="px-4"><WorkScheduleComp workSchedule={workSchedule} onUpdateSchedule={setWorkSchedule} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'fixed-expenses' && <div className="px-4"><FixedExpenses fixedExpenses={fixedExpenses} creditCards={creditCards} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onAddExpense={handleAddFixedExpense} onUpdateExpense={handleUpdateFixedExpense} onDeleteExpense={handleDeleteFixedExpense} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'maintenance' && <div className="px-4"><Maintenance transactions={transactions} goalSettings={goalSettings} plannedMaintenances={plannedMaintenances} onUpdatePlanned={setPlannedMaintenances} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'settings' && <div className="px-4"><Settings onClearData={handleClearData} userProfile={userProfile} onUpdateProfile={setUserProfile} onLogout={handleLogout} goalSettings={goalSettings} onUpdateSettings={setGoalSettings} currentTheme={theme} onToggleTheme={toggleTheme} transactions={transactions} creditCards={creditCards} onAddCard={handleAddCard} onUpdateCard={handleUpdateCard} onDeleteCard={handleDeleteCard} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'fuel-analysis' && <div className="px-4"><FuelAnalysis transactions={transactions} fixedExpenses={fixedExpenses} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'full-history' && <div className="px-4"><FullHistory transactions={transactions} fixedExpenses={fixedExpenses} startDayOfMonth={goalSettings.startDayOfMonth} endDayOfMonth={goalSettings.endDayOfMonth} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={handleDeleteTransaction} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
-        {currentView === 'yearly-summary' && <div className="px-4"><YearlySummary transactions={transactions} onChangeView={setCurrentView} onOpenMenu={toggleSidebar} /></div>}
-      </main>
     </div>
   );
 };

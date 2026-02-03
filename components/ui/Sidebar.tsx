@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, currentView, 
           <div className="p-5 border-t border-slate-100 dark:border-slate-800">
             <div className="p-3 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
               <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">
-                🏍️ Meu Corre v2.0
+                MEU CORRE v2.0
               </p>
             </div>
           </div>

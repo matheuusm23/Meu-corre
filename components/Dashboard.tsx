@@ -3,11 +3,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { Transaction, TransactionType, ViewMode, FixedExpense, UserProfile } from '../types';
 import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull, getStartOfWeek } from '../utils';
-import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Calendar, Wrench } from './Icons';
-import { Logo } from './ui/Logo';
+import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Home } from './Icons';
 import { v4 as uuidv4 } from 'uuid';
-import { analyticsPromise } from '../lib/firebase';
-import { logEvent } from "firebase/analytics";
 
 interface DashboardProps {
   userProfile: UserProfile | null;
@@ -26,28 +23,11 @@ const DELIVERY_APPS = ['iFood', '99', 'Rappi', 'Lalamove', 'Uber', 'Loggi', 'Bor
 const EXPENSE_CATEGORIES = ['Manutenção', 'Combustível', 'Comida', 'Mercado', 'Gastos na rua', 'Outros'];
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
-  userProfile,
-  transactions, 
-  fixedExpenses,
-  startDayOfMonth,
-  endDayOfMonth,
-  onAddTransaction, 
-  onUpdateTransaction, 
-  onDeleteTransaction,
-  onChangeView,
-  onOpenMenu
+  userProfile, transactions, fixedExpenses, startDayOfMonth, endDayOfMonth, onAddTransaction, onUpdateTransaction, onDeleteTransaction, onChangeView, onOpenMenu
 }) => {
-  const viewDate = useMemo(() => new Date(), []);
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-  
   const [showForm, setShowForm] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [chartVisible, setChartVisible] = useState(false);
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
 
   const [amount, setAmount] = useState('');
@@ -56,14 +36,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [type, setType] = useState<TransactionType>('income');
   const [category, setCategory] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => setChartVisible(true), 200);
-    return () => clearTimeout(timer);
+  const today = useMemo(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0); return d;
   }, []);
 
   const { startDate, endDate } = useMemo(() => 
-    getBillingPeriodRange(viewDate, startDayOfMonth, endDayOfMonth), 
-  [viewDate, startDayOfMonth, endDayOfMonth]);
+    getBillingPeriodRange(new Date(), startDayOfMonth, endDayOfMonth), 
+  [startDayOfMonth, endDayOfMonth]);
 
   const currentPeriodTransactions = useMemo(() => {
     return transactions.filter(t => {
@@ -72,168 +51,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, startDate, endDate]);
 
-  const weeklyPerformance = useMemo(() => {
-    const weekStart = getStartOfWeek(today);
-    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-    
-    return days.map((label, index) => {
-      const currentDay = new Date(weekStart);
-      currentDay.setDate(weekStart.getDate() + index);
-      const dayTransactions = transactions.filter(t => 
-        t.type === 'income' && isSameDay(parseDateLocal(t.date), currentDay)
-      );
-      const total = dayTransactions.reduce((acc, t) => acc + t.amount, 0);
-      return { 
-        label, 
-        value: total, 
-        isToday: isSameDay(currentDay, today) 
-      };
-    });
-  }, [transactions, today]);
-
-  const maxDailyValue = useMemo(() => {
-    const values = weeklyPerformance.map(d => d.value);
-    const max = Math.max(...values);
-    return max > 100 ? max * 1.2 : 200;
-  }, [weeklyPerformance]);
-
-  const weeklyGroups = useMemo(() => {
-    const groups: Record<string, { 
-      startDate: Date, 
-      income: number, 
-      expense: number,
-      dailyTransactions: Record<string, Transaction[]> 
-    }> = {};
-
-    currentPeriodTransactions.forEach(t => {
-      const tDate = parseDateLocal(t.date);
-      const weekStart = getStartOfWeek(tDate);
-      const weekKey = weekStart.toISOString().split('T')[0];
-
-      if (!groups[weekKey]) {
-        groups[weekKey] = { 
-          startDate: weekStart, 
-          income: 0, 
-          expense: 0, 
-          dailyTransactions: {} 
-        };
-      }
-
-      groups[weekKey].income += t.type === 'income' ? t.amount : 0;
-      groups[weekKey].expense += t.type === 'expense' ? t.amount : 0;
-
-      const dateStr = t.date.split('T')[0];
-      if (!groups[weekKey].dailyTransactions[dateStr]) {
-        groups[weekKey].dailyTransactions[dateStr] = [];
-      }
-      groups[weekKey].dailyTransactions[dateStr].push(t);
-    });
-
-    return groups;
-  }, [currentPeriodTransactions]);
-
-  const sortedWeeks = useMemo(() => Object.keys(weeklyGroups).sort((a, b) => b.localeCompare(a)), [weeklyGroups]);
-
-  const relevantFixed = useMemo(() => {
-    return getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
-  }, [fixedExpenses, startDate, endDate]);
+  const monthGrossIncome = useMemo(() => {
+    const manualIncomes = currentPeriodTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+    const relevantFixed = getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
+    const receivedFixedIncomes = relevantFixed.filter(e => e.type === 'income' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
+    return manualIncomes + receivedFixedIncomes;
+  }, [currentPeriodTransactions, fixedExpenses, startDate, endDate]);
 
   const todayStats = useMemo(() => {
     const dayTransactions = transactions.filter(t => isSameDay(parseDateLocal(t.date), today));
     const income = dayTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     const expense = dayTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
-    return { income, expense, balance: income - expense };
+    return { income, expense };
   }, [transactions, today]);
-
-  const weekBalance = useMemo(() => {
-    return transactions
-      .filter(t => isSameWeek(parseDateLocal(t.date), today) && t.type === 'income')
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions, today]);
-
-  const { settledMonthBalance, todayBalance } = useMemo(() => {
-    const settledManual = currentPeriodTransactions
-      .filter(t => parseDateLocal(t.date) < today)
-      .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
-    
-    const tBalance = currentPeriodTransactions
-      .filter(t => isSameDay(parseDateLocal(t.date), today))
-      .reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
-
-    const paidFixedExpenses = relevantFixed.filter(e => e.type === 'expense' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
-    const receivedFixedIncomes = relevantFixed.filter(e => e.type === 'income' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
-    
-    return {
-      settledMonthBalance: settledManual - paidFixedExpenses + receivedFixedIncomes,
-      todayBalance: tBalance
-    };
-  }, [currentPeriodTransactions, relevantFixed, today]);
-
-  const monthGrossIncome = useMemo(() => {
-    const manualIncomes = currentPeriodTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
-    const receivedFixedIncomes = relevantFixed.filter(e => e.type === 'income' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
-    return manualIncomes + receivedFixedIncomes;
-  }, [currentPeriodTransactions, relevantFixed]);
-
-  const monthFuelTotal = useMemo(() => {
-    let total = 0;
-    currentPeriodTransactions
-      .filter(t => t.type === 'expense')
-      .forEach(t => {
-        const desc = t.description.toLowerCase();
-        if (desc.includes('combustível') || desc.includes('gasolina') || desc.includes('posto') || desc.includes('etanol')) total += t.amount;
-      });
-    relevantFixed
-      .filter(e => e.type === 'expense' && e.isPaid && (e.category === 'Combustível' || e.title.toLowerCase().includes('combustível')))
-      .forEach(e => { total += e.amount; });
-    return total;
-  }, [currentPeriodTransactions, relevantFixed]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    
-    let finalDesc = description.trim();
-    if (!finalDesc) {
-      finalDesc = category || (type === 'income' ? 'Ganho' : 'Gasto');
-    } else if (category) {
-      finalDesc = `${finalDesc} - ${category}`;
-    }
-
-    const transactionData: Transaction = {
-      id: editingId || uuidv4(),
-      amount: parseFloat(amount),
-      description: finalDesc,
-      date: date, 
-      type,
-    };
-    if (editingId) {
-      onUpdateTransaction(transactionData);
-    } else {
-      onAddTransaction(transactionData);
-      // Track new transaction event
-      analyticsPromise.then(analytics => {
-        if (analytics) {
-          logEvent(analytics, 'add_transaction', {
-            type,
-            category: category || 'General',
-            value: parseFloat(amount)
-          });
-        }
-      });
-    }
+    let finalDesc = description.trim() || (type === 'income' ? 'Ganho' : 'Gasto');
+    if (category) finalDesc = `${finalDesc} - ${category}`;
+    const transactionData: Transaction = { id: editingId || uuidv4(), amount: parseFloat(amount), description: finalDesc, date: date, type };
+    if (editingId) onUpdateTransaction(transactionData); else onAddTransaction(transactionData);
     setShowForm(false);
   };
 
-  const handleOpenForm = (t?: Transaction | null, initialType?: TransactionType, initialCategory?: string) => {
+  const handleOpenForm = (t?: Transaction | null) => {
     if (t) {
       setEditingId(t.id);
       setAmount(t.amount.toString());
       if (t.description.includes(' - ')) {
-        const parts = t.description.split(' - ');
-        const cat = parts.pop() || '';
+        const [desc, cat] = t.description.split(' - ');
+        setDescription(desc);
         setCategory(cat);
-        setDescription(parts.join(' - '));
       } else {
         setDescription(t.description);
         setCategory('');
@@ -245,34 +94,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setAmount('');
       setDescription('');
       setDate(getISODate(new Date()));
-      setType(initialType || 'income');
-      setCategory(initialCategory || '');
+      setType('income');
+      setCategory('');
     }
     setShowForm(true);
   };
 
-  const toggleWeekExpansion = (weekKey: string) => {
-    setExpandedWeeks(prev => ({
-      ...prev,
-      [weekKey]: !prev[weekKey]
-    }));
-    if (navigator.vibrate) navigator.vibrate(5);
-  };
-
   return (
-    <div className="flex flex-col gap-2 pb-12">
-      {/* Header Corporativo Blue (Combinando com a tela de login) */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-700 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 w-full pt-8 pb-10 px-6 flex flex-col gap-12 shadow-xl">
-        <header className="relative flex items-center justify-between z-10 w-full h-10">
+    <div className="flex flex-col min-h-screen">
+      {/* Header Corporativo Blue */}
+      <div className="relative overflow-hidden bg-blue-600 dark:bg-slate-900 w-full pt-8 pb-14 px-6 flex flex-col gap-12 shadow-xl">
+        <header className="relative flex items-center justify-between z-10 w-full">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Bem-vindo</span>
             <p className="text-sm font-black text-white leading-none tracking-tight">Olá, {userProfile?.name || 'Parceiro'}</p>
           </div>
-          {/* Título Meu Corre removido conforme pedido */}
-          <button 
-            onClick={onOpenMenu}
-            className="p-2 rounded-xl bg-white/10 text-white backdrop-blur-md border border-white/10 active:scale-90 transition-all"
-          >
+          <button onClick={onOpenMenu} className="p-2 rounded-xl bg-white/10 text-white backdrop-blur-md border border-white/10 active:scale-90 transition-all">
             <Menu size={20} />
           </button>
         </header>
@@ -289,26 +126,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
           </div>
-          <div className="active:scale-95 transition-all">
-             <div className="bg-white/10 backdrop-blur-[40px] border border-white/30 px-4 py-3 rounded-[1.75rem] shadow-lg min-w-[130px]">
-                <span className="text-white text-[8px] font-black uppercase tracking-[0.15em] opacity-60">Saldo Livre</span>
-                <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(settledMonthBalance) : '••••'}</p>
-                {isBalanceVisible && todayBalance !== 0 && (
-                  <div className="mt-1.5 flex flex-col items-start animate-in fade-in slide-in-from-top-1 duration-500">
-                    <p className="text-[7px] text-blue-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
-                    <p className="text-[10px] text-blue-50 font-black tracking-tight leading-none">
-                       {formatCurrency(settledMonthBalance + todayBalance)}
-                    </p>
-                  </div>
-                )}
-             </div>
-          </div>
         </div>
       </div>
 
-      <div className="px-4 flex flex-col gap-3 mt-[-20px] relative z-20">
-        
-        {/* Ganhos do Dia */}
+      <div className="flex-1 bg-white dark:bg-slate-950 rounded-t-[2.5rem] mt-[-30px] pt-8 px-4 flex flex-col gap-3 relative z-20 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-24">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.25rem] border border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -326,147 +147,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Cards Secundários */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card 
-            title="Ganhos Semana" 
-            value={formatCurrency(weekBalance)} 
-            icon={<BarChart3 size={14} className="text-blue-500"/>} 
-            valueClassName="text-base" 
-          />
-          <Card 
-            title="Combustível" 
-            value={formatCurrency(monthFuelTotal)} 
-            icon={<Fuel size={14} className="text-amber-500" />} 
-            onClick={() => onChangeView('fuel-analysis')}
-            valueClassName="text-base" 
-            className="border-slate-100 dark:border-transparent shadow-sm"
-          />
-        </div>
-
-        {/* GRÁFICO DE DESEMPENHO SEMANAL */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl space-y-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-              <BarChart3 size={14} className="text-blue-500" /> Desempenho Semanal
-            </h3>
-            <div className="bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-900/40">
-              <span className="text-[9px] font-black text-blue-600 dark:text-blue-400">Total: {formatCurrency(weekBalance)}</span>
-            </div>
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center gap-2 px-1">
+            <Clock size={16} className="text-slate-400" />
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Atividades Recentes</h3>
           </div>
-
-          <div className="flex items-end justify-between h-48 pt-6 gap-2">
-            {weeklyPerformance.map((day, idx) => {
-              const barHeight = chartVisible ? (day.value / maxDailyValue) * 100 : 0;
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full">
-                  <div className="relative w-full flex flex-col items-center justify-end h-full">
-                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30">
-                      <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[9px] font-black py-1 px-2 rounded-lg shadow-xl border border-white/10 dark:border-slate-200">
-                        {formatCurrency(day.value)}
-                      </div>
-                    </div>
-                    
-                    <div className="absolute inset-0 w-full bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner" />
-
-                    <div 
-                      className={`w-full rounded-md transition-all duration-1000 ease-out relative z-10 shadow-md ${
-                        day.isToday 
-                          ? 'bg-gradient-to-t from-blue-700 to-blue-500 shadow-blue-500/40' 
-                          : 'bg-gradient-to-t from-slate-400 to-slate-300 dark:from-slate-600 dark:to-slate-500'
-                      }`}
-                      style={{ height: `${Math.max(day.value > 0 && chartVisible ? 8 : 0, barHeight)}%` }}
-                    >
-                       {day.value > 0 && chartVisible && (
-                         <div className="absolute top-0.5 left-0.5 right-0.5 h-1.5 bg-white/20 rounded-sm" />
-                       )}
-                    </div>
+          
+          {currentPeriodTransactions.length > 0 ? (
+            currentPeriodTransactions.slice(0, 10).map(t => (
+              <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}`}>
+                    {t.type === 'income' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
                   </div>
-                  <span className={`text-[10px] font-black uppercase tracking-tighter ${day.isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
-                    {day.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between px-2 mt-4">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Clock size={14} /> Histórico Semanal
-          </h3>
-          <button 
-            onClick={() => onChangeView('yearly-summary')}
-            className="p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 active:scale-90 transition-all shadow-sm flex items-center gap-1.5"
-          >
-            <BarChart3 size={14} />
-            <span className="text-[9px] font-black uppercase">Resumo Anual</span>
-          </button>
-        </div>
-
-        <div className="space-y-3 pb-24">
-          {sortedWeeks.length > 0 ? (
-            sortedWeeks.map((weekKey) => {
-              const weekData = weeklyGroups[weekKey];
-              const isExpanded = !!expandedWeeks[weekKey];
-              const weekEndDate = new Date(weekData.startDate);
-              weekEndDate.setDate(weekEndDate.getDate() + 6);
-              return (
-                <div key={weekKey} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-md overflow-hidden transition-all duration-300">
-                  <div 
-                    onClick={() => toggleWeekExpansion(weekKey)}
-                    className={`p-4 flex items-center justify-between cursor-pointer active:bg-slate-50 dark:active:bg-slate-800 transition-colors ${isExpanded ? 'border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30' : ''}`}
-                  >
-                    <div className="flex flex-col">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                        {weekData.startDate.getDate()}/{weekData.startDate.getMonth() + 1} até {weekEndDate.getDate()}/{weekEndDate.getMonth() + 1}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-slate-900 dark:text-white">
-                          Faturamento: {formatCurrency(weekData.income)}
-                        </span>
-                        {weekData.expense > 0 && (
-                          <span className="text-[9px] font-bold text-rose-500">
-                            -{formatCurrency(weekData.expense)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                      <ChevronDown size={16} />
-                    </div>
+                  <div>
+                    <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
                   </div>
-                  {isExpanded && (
-                    <div className="p-2 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                      {Object.keys(weekData.dailyTransactions).sort((a,b) => b.localeCompare(a)).map(dayKey => (
-                        <div key={dayKey} className="space-y-1.5">
-                          <div className="px-3">
-                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                               {isSameDay(parseDateLocal(dayKey), today) ? 'Hoje' : formatDateFull(dayKey)}
-                             </span>
-                          </div>
-                          {weekData.dailyTransactions[dayKey].map(t => (
-                            <div key={t.id} onClick={(e) => { e.stopPropagation(); handleOpenForm(t); }} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
-                                  {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
-                                </div>
-                                <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
-                              </div>
-                              <p className={`text-xs font-black ${t.type === 'income' ? 'text-blue-600' : 'text-rose-600'}`}>
-                                {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              );
-            })
+                <p className={`text-sm font-black ${t.type === 'income' ? 'text-blue-600' : 'text-rose-600'}`}>
+                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                </p>
+              </div>
+            ))
           ) : (
-            <div className="py-12 text-center opacity-40 bg-white dark:bg-slate-900 rounded-[2rem] border border-dashed border-slate-200">
+            <div className="py-12 text-center opacity-30">
               <Receipt size={32} className="mx-auto mb-2 text-slate-300" />
               <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos</p>
             </div>
@@ -474,11 +179,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Botão Flutuante Corporativo Blue */}
-      <button 
-        onClick={() => handleOpenForm()} 
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 dark:bg-white rounded-2xl shadow-2xl flex items-center justify-center text-white dark:text-slate-900 active:scale-90 transition-all border border-blue-500/50 dark:border-white"
-      >
+      <button onClick={() => handleOpenForm()} className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 rounded-2xl shadow-2xl flex items-center justify-center text-white active:scale-90 transition-all border border-blue-500/50">
         <Plus size={28} strokeWidth={3} />
       </button>
 
@@ -497,7 +198,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
                <div className="relative">
                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">R$</span>
-                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-white border border-slate-200 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none dark:text-white transition-all" />
+                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-white border border-slate-200 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:border-blue-500 outline-none dark:text-white transition-all" />
                </div>
                <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição (ex: iFood)" className="w-full bg-white border border-slate-200 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm dark:text-white focus:border-blue-500 outline-none transition-all" />
                <div className="grid grid-cols-2 gap-3">

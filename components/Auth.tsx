@@ -11,11 +11,6 @@ import {
   signInWithPopup
 } from "firebase/auth";
 
-interface AuthProps {
-  onLogin: (profile: UserProfile) => void;
-  existingProfile: UserProfile | null;
-}
-
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -25,11 +20,10 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const AppleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.05 20.28c-.96.06-1.46-.24-2.24-.24-.8 0-1.42.27-2.18.25-2.37-.08-4.55-1.42-5.75-3.51-2.43-4.18-.62-10.43 3.12-10.43 1.05 0 1.76.51 2.39.51.62 0 1.57-.56 2.76-.56 1.45 0 2.59.73 3.23 1.67-2.95 1.76-2.48 5.7.53 6.94-.64 1.83-1.63 3.65-3.08 5.31l1.22.06zm-1.87-16.12c-.58 0-1.2.29-1.65.81-1.02 1.13-1.04 2.92.05 4.01.55.54 1.34.82 2.05.82.59 0 1.15-.31 1.59-.83.98-1.16.92-2.91-.04-4.01-.52-.59-1.25-.8-2-.8z"/>
-  </svg>
-);
+interface AuthProps {
+  onLogin: () => void;
+  existingProfile: UserProfile | null;
+}
 
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -94,37 +88,39 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       <div className="h-8" />
 
       <main className="w-full max-w-md mx-auto flex flex-col flex-1">
+        {/* Logo Centralizado no Topo */}
+        <div className="flex flex-col items-center justify-center pt-6 mb-8 select-none text-center">
+          <h2 className="text-4xl font-black text-slate-900 tracking-tighter leading-none flex items-center gap-2">
+            MEU CORRE
+          </h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mt-2">
+            Financeiro do motoboy
+          </p>
+        </div>
+
         {/* Intro Text */}
-        <div className="mt-8 mb-10">
+        <div className="mb-10 text-center">
           <p className="text-slate-500 text-sm font-normal mb-1">Acesse sua conta</p>
-          <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 leading-tight tracking-tight">
             Informe seu e-mail de cadastro e senha
           </h1>
         </div>
 
-        {/* Social Login */}
-        <div className="flex gap-4 mb-6">
+        {/* Social Login - Somente Google */}
+        <div className="flex mb-6">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
             className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl font-bold text-sm shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <GoogleIcon />
-            Google
-          </button>
-          <button
-            onClick={() => setError('Login com Apple em breve.')}
-            disabled={loading}
-            className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl font-bold text-sm shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            <AppleIcon />
-            Apple
+            Continuar com Google
           </button>
         </div>
 
         {/* Legal Text */}
         <p className="text-[11px] text-slate-400 text-center leading-relaxed mb-8 px-4">
-          Ao conectar com rede social, você concorda com os nossos{' '}
+          Ao continuar, você concorda com os nossos{' '}
           <a href="#" className="text-blue-600 font-bold hover:underline">termos de uso</a> e{' '}
           <a href="#" className="text-blue-600 font-bold hover:underline">política de privacidade</a>.
         </p>
@@ -132,7 +128,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         {/* Divider */}
         <div className="flex items-center gap-4 mb-8">
           <div className="h-[1px] flex-1 bg-slate-200" />
-          <span className="text-[11px] font-medium text-slate-400">ou continue com seu e-mail</span>
+          <span className="text-[11px] font-medium text-slate-400">ou use seu e-mail</span>
           <div className="h-[1px] flex-1 bg-slate-200" />
         </div>
 
@@ -211,7 +207,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         {/* Bottom Branding */}
         <div className="mt-auto pt-8 flex justify-center pb-4">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-            Meu Corre 2.0 🏍️
+            MEU CORRE 2.0
           </p>
         </div>
       </main>

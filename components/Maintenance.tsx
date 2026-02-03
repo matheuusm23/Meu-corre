@@ -119,7 +119,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
       <header className="px-2 flex items-center justify-between">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+            <div className="w-1 h-5 bg-blue-600 rounded-full" />
             <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Manutenção</h1>
           </div>
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mt-1.5 ml-3">Saúde da Moto</p>
@@ -136,17 +136,17 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
       <section className="px-2">
         <div 
           onClick={() => setShowHistoryModal(true)}
-          className="bg-slate-900 dark:bg-white p-6 rounded-[2.5rem] border border-slate-700 dark:border-slate-100 shadow-xl relative overflow-hidden group transition-all duration-300 cursor-pointer active:scale-[0.98]"
+          className="bg-blue-600 dark:bg-slate-900 p-6 rounded-[2.5rem] border border-blue-500/30 dark:border-slate-800 shadow-xl relative overflow-hidden group transition-all duration-300 cursor-pointer active:scale-[0.98]"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-110 transition-transform duration-700" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-110 transition-transform duration-700" />
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-[1.5rem] bg-emerald-500 text-white flex items-center justify-center shadow-xl shadow-emerald-500/30">
+              <div className="w-14 h-14 rounded-[1.5rem] bg-white text-blue-600 flex items-center justify-center shadow-xl">
                 <Wrench size={28} strokeWidth={2.5} />
               </div>
               <div className="text-left">
                 <p className="text-[10px] font-black text-white/50 dark:text-slate-400 uppercase tracking-[0.25em] mb-1">Gasto no Ciclo</p>
-                <h2 className="text-3xl font-black text-white dark:text-slate-900 tracking-tighter leading-none">
+                <h2 className="text-3xl font-black text-white dark:text-white tracking-tighter leading-none">
                   {formatCurrency(totalSpentInCycle)}
                 </h2>
               </div>
@@ -154,7 +154,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
             
             <button 
               onClick={(e) => { e.stopPropagation(); setShowHistoryModal(true); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 dark:bg-slate-100 rounded-2xl border border-white/10 dark:border-slate-200 text-emerald-400 dark:text-emerald-600 active:scale-95 transition-all shadow-lg backdrop-blur-md"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/10 dark:bg-slate-800 rounded-2xl border border-white/10 dark:border-slate-700 text-white active:scale-95 transition-all shadow-lg backdrop-blur-md"
               title="Ver Histórico Anual"
             >
               <Eye size={16} />
@@ -173,7 +173,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
            </div>
            <button 
              onClick={() => setShowAddModal(true)}
-             className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-full border border-emerald-100/50 dark:border-emerald-800/30 active:scale-95 transition-all"
+             className="flex items-center gap-1.5 text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 dark:bg-blue-950/30 px-3 py-1.5 rounded-full border border-blue-100/50 dark:border-blue-800/30 active:scale-95 transition-all"
            >
              <Plus size={10} strokeWidth={3} /> Adicionar
            </button>
@@ -197,7 +197,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
                              {formatCurrency(item.estimatedValue)}
                            </span>
                            {item.targetDate && (
-                             <div className="flex items-center gap-1 text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase bg-emerald-50 dark:bg-emerald-950/20 px-1.5 py-0.5 rounded">
+                             <div className="flex items-center gap-1 text-[8px] font-black text-blue-600 dark:text-blue-400 uppercase bg-blue-50 dark:bg-blue-950/20 px-1.5 py-0.5 rounded">
                                <Calendar size={9} />
                                {item.targetDate.split('-').reverse().slice(0,2).join('/')}
                              </div>
@@ -353,7 +353,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
                       value={newDesc}
                       onChange={e => setNewDesc(e.target.value)}
                       placeholder="Ex: Troca de relação, Pneu..."
-                      className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-emerald-500/20"
+                      className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-blue-600/20"
                     />
                  </div>
 
@@ -369,7 +369,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
                             value={newValue}
                             onChange={e => setNewValue(e.target.value)}
                             placeholder="0,00"
-                            className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 pl-8 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-emerald-500/20"
+                            className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 pl-8 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-blue-600/20"
                           />
                        </div>
                     </div>
@@ -380,14 +380,14 @@ export const Maintenance: React.FC<MaintenanceProps> = ({
                          required
                          value={newTargetDate}
                          onChange={e => setNewTargetDate(e.target.value)}
-                         className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-emerald-500/20"
+                         className="w-full bg-slate-50 dark:bg-slate-800 p-3.5 rounded-2xl font-black text-xs text-slate-900 dark:text-white focus:outline-none border border-slate-100 dark:border-slate-700 shadow-inner focus:ring-2 focus:ring-blue-600/20"
                        />
                     </div>
                  </div>
 
                  <button 
                    type="submit"
-                   className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-all mt-4"
+                   className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-all mt-4"
                  >
                    Confirmar
                  </button>

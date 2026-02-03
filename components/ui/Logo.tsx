@@ -9,7 +9,7 @@ interface LogoProps {
 
 export const Logo: React.FC<LogoProps> = ({ 
   variant = 'default', 
-  showEmoji = true,
+  showEmoji = false, // Desabilitado por padrão conforme pedido
   size = 'md'
 }) => {
   const textColor = variant === 'light' ? 'text-white' : 'text-slate-900 dark:text-white';
@@ -23,8 +23,8 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className="flex items-center gap-2 select-none py-1">
-      <h1 className={`${sizeClasses[size]} font-bold tracking-tight ${textColor}`}>
-        Meu Corre
+      <h1 className={`${sizeClasses[size]} font-bold tracking-tight uppercase ${textColor}`}>
+        MEU CORRE
       </h1>
       {showEmoji && <span className={size === 'xs' ? 'text-sm' : size === 'sm' ? 'text-lg' : 'text-2xl'}>🏍️</span>}
     </div>
