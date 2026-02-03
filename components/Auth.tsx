@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { Logo } from './ui/Logo';
-import { User, Lock, ChevronRight, CheckCircle2, AlertCircle, RefreshCw, Info } from './Icons';
+import { User, Lock, Eye, EyeOff, AlertCircle, RefreshCw, Info } from './Icons';
 import { auth } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -26,42 +25,37 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const AppleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.05 20.28c-.96.06-1.46-.24-2.24-.24-.8 0-1.42.27-2.18.25-2.37-.08-4.55-1.42-5.75-3.51-2.43-4.18-.62-10.43 3.12-10.43 1.05 0 1.76.51 2.39.51.62 0 1.57-.56 2.76-.56 1.45 0 2.59.73 3.23 1.67-2.95 1.76-2.48 5.7.53 6.94-.64 1.83-1.63 3.65-3.08 5.31l1.22.06zm-1.87-16.12c-.58 0-1.2.29-1.65.81-1.02 1.13-1.04 2.92.05 4.01.55.54 1.34.82 2.05.82.59 0 1.15-.31 1.59-.83.98-1.16.92-2.91-.04-4.01-.52-.59-1.25-.8-2-.8z"/>
+  </svg>
+);
+
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isSignup = mode === 'signup';
 
-  // Fix: Added missing toggleMode function to switch between login and signup
-  const toggleMode = () => setMode(prev => prev === 'login' ? 'signup' : 'login');
+  const toggleMode = () => {
+    setMode(prev => prev === 'login' ? 'signup' : 'login');
+    setError('');
+  };
 
   const handleGoogleLogin = async () => {
     setError('');
-    setUnauthorizedDomain(null);
     setLoading(true);
-    
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-
     try {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      console.error("Google Auth Error:", err.code, err.message);
-      
-      if (err.code === 'auth/unauthorized-domain') {
-        const domain = window.location.hostname;
-        setError(`Este domínio (${domain}) não está autorizado no Firebase.`);
-        setUnauthorizedDomain(domain);
-      } else if (err.code === 'auth/operation-not-allowed') {
-        setError('O login com Google não foi ativado no Console do Firebase.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        setError('Você fechou a janela do Google antes de terminar.');
-      } else {
+      if (err.code !== 'auth/popup-closed-by-user') {
         setError('Falha ao conectar com Google. Verifique sua conexão.');
       }
     } finally {
@@ -72,9 +66,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setUnauthorizedDomain(null);
     setLoading(true);
-
     try {
       if (isSignup) {
         if (!name || !email || !password) throw new Error('Preencha todos os campos');
@@ -88,7 +80,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       let message = 'Erro na autenticação';
       if (err.code === 'auth/invalid-credential') message = 'E-mail ou senha incorretos.';
       else if (err.code === 'auth/email-already-in-use') message = 'Este e-mail já está em uso.';
-      else if (err.code === 'auth/operation-not-allowed') message = 'Login por e-mail desativado no Firebase.';
+      else if (err.code === 'auth/weak-password') message = 'A senha deve ter pelo menos 6 caracteres.';
       else message = err.message;
       setError(message);
     } finally {
@@ -97,99 +89,132 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex flex-col items-center text-center space-y-2">
-          <div className="p-4 bg-emerald-500 rounded-[2rem] shadow-2xl shadow-emerald-500/20 mb-4 animate-bounce">
-            <Logo variant="light" size="lg" />
-          </div>
-          <h2 className="text-3xl font-black text-white tracking-tighter">
-            {isSignup ? 'Começar o Corre' : 'Entrar no Corre'}
-          </h2>
-          <p className="text-slate-400 text-sm font-medium">Use sua conta Google para acesso rápido</p>
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col p-6 font-sans">
+      {/* Status Bar Spacer */}
+      <div className="h-8" />
+
+      <main className="w-full max-w-md mx-auto flex flex-col flex-1">
+        {/* Intro Text */}
+        <div className="mt-8 mb-10">
+          <p className="text-slate-500 text-sm font-normal mb-1">Acesse sua conta</p>
+          <h1 className="text-[28px] font-bold text-slate-900 leading-tight tracking-tight">
+            Informe seu e-mail de cadastro e senha
+          </h1>
         </div>
 
-        <div className="space-y-4">
+        {/* Social Login */}
+        <div className="flex gap-4 mb-6">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-4 bg-white hover:bg-slate-100 text-slate-900 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl font-bold text-sm shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {loading ? <RefreshCw size={20} className="animate-spin text-emerald-500" /> : <GoogleIcon />}
-            Entrar com Google
+            <GoogleIcon />
+            Google
           </button>
+          <button
+            onClick={() => setError('Login com Apple em breve.')}
+            disabled={loading}
+            className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-900 rounded-2xl font-bold text-sm shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100 flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            <AppleIcon />
+            Apple
+          </button>
+        </div>
 
-          <div className="flex items-center gap-4 px-2">
-            <div className="h-[1px] flex-1 bg-slate-800" />
-            <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">ou e-mail</span>
-            <div className="h-[1px] flex-1 bg-slate-800" />
-          </div>
+        {/* Legal Text */}
+        <p className="text-[11px] text-slate-400 text-center leading-relaxed mb-8 px-4">
+          Ao conectar com rede social, você concorda com os nossos{' '}
+          <a href="#" className="text-blue-600 font-bold hover:underline">termos de uso</a> e{' '}
+          <a href="#" className="text-blue-600 font-bold hover:underline">política de privacidade</a>.
+        </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignup && (
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Seu nome"
-                className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
-              />
-            )}
+        {/* Divider */}
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-[1px] flex-1 bg-slate-200" />
+          <span className="text-[11px] font-medium text-slate-400">ou continue com seu e-mail</span>
+          <div className="h-[1px] flex-1 bg-slate-200" />
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isSignup && (
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="E-mail"
-              className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Nome completo"
+              className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-slate-900 font-medium text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
             />
+          )}
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="E-mail"
+            className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-slate-900 font-medium text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+          />
+          <div className="relative">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Senha"
-              className="w-full bg-slate-900 border border-slate-800 p-4 rounded-2xl text-white font-black text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              className="w-full bg-white border border-slate-200 p-4 rounded-2xl text-slate-900 font-medium text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
             />
-
-            {error && (
-              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl space-y-3">
-                <div className="flex items-center gap-2 text-rose-500 font-black uppercase text-[10px] tracking-widest">
-                  <AlertCircle size={14} /> Atenção
-                </div>
-                <p className="text-rose-400 text-xs font-medium">{error}</p>
-                
-                {unauthorizedDomain && (
-                  <div className="p-3 bg-black/40 rounded-xl space-y-2 border border-rose-500/30">
-                    <p className="text-[10px] text-white font-black uppercase flex items-center gap-1">
-                      <Info size={12} className="text-emerald-500" /> Resolver Agora:
-                    </p>
-                    <p className="text-[10px] text-slate-400 leading-tight">
-                      Vá em <b>Authentication > Settings > Authorized domains</b> no Firebase e adicione:
-                    </p>
-                    <code className="block bg-slate-800 p-2 rounded text-emerald-400 font-mono text-[11px] break-all">
-                      {unauthorizedDomain}
-                    </code>
-                  </div>
-                )}
-              </div>
-            )}
-
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
             >
-              {isSignup ? 'Criar Conta' : 'Entrar'}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-          </form>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100 animate-in fade-in zoom-in-95">
+              <AlertCircle size={18} />
+              <p className="text-xs font-bold leading-tight">{error}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-xl shadow-blue-600/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
+          >
+            {loading ? <RefreshCw size={20} className="animate-spin" /> : (isSignup ? 'Cadastrar' : 'Entrar')}
+          </button>
+        </form>
+
+        {/* Auxiliary Links */}
+        <div className="mt-8 flex flex-col items-center space-y-4">
+          <button 
+            type="button"
+            className="text-sm font-medium text-slate-500 hover:text-blue-600 transition-colors"
+          >
+            Esqueceu sua senha?
+          </button>
+          
+          <button 
+            onClick={toggleMode}
+            className="text-sm font-medium text-slate-500"
+          >
+            {isSignup ? (
+              <>Já possui uma conta? <span className="text-blue-600 font-bold">Faça login</span></>
+            ) : (
+              <>Ainda não possui conta? <span className="text-blue-600 font-bold">Clique aqui</span></>
+            )}
+          </button>
         </div>
 
-        <button 
-          onClick={toggleMode}
-          className="w-full text-emerald-500 text-xs font-black uppercase tracking-widest text-center"
-        >
-          {isSignup ? 'Já tenho conta' : 'Criar conta gratuita'}
-        </button>
-      </div>
+        {/* Bottom Branding */}
+        <div className="mt-auto pt-8 flex justify-center pb-4">
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+            Meu Corre 2.0 🏍️
+          </p>
+        </div>
+      </main>
     </div>
   );
 };

@@ -23,7 +23,7 @@ export const Logo: React.FC<LogoProps> = ({
 
   return (
     <div className="flex items-center gap-2 select-none py-1">
-      <h1 className={`${sizeClasses[size]} font-black tracking-tight ${textColor}`}>
+      <h1 className={`${sizeClasses[size]} font-bold tracking-tight ${textColor}`}>
         Meu Corre
       </h1>
       {showEmoji && <span className={size === 'xs' ? 'text-sm' : size === 'sm' ? 'text-lg' : 'text-2xl'}>🏍️</span>}

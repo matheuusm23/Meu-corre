@@ -30,9 +30,9 @@ export const Card: React.FC<CardProps> = ({
   const interactiveStyles = onClick ? "cursor-pointer active:scale-[0.98] hover:shadow-md" : "";
 
   const variants = {
-    default: "bg-white/80 dark:bg-slate-900/60 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.15)]",
+    default: "bg-white dark:bg-slate-900/60 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.15)]",
     primary: "bg-gradient-to-br from-blue-600 to-blue-700 text-white border-blue-500/50 shadow-lg shadow-blue-500/20",
-    success: "bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-emerald-500/50 shadow-lg shadow-emerald-500/20",
+    success: "bg-gradient-to-br from-blue-500 to-indigo-700 text-white border-blue-500/50 shadow-lg shadow-blue-500/20", // Alterado para azul consistente
     danger: "bg-gradient-to-br from-rose-500 to-rose-700 text-white border-rose-500/50 shadow-lg shadow-rose-500/20",
   };
 
@@ -46,7 +46,7 @@ export const Card: React.FC<CardProps> = ({
           {title}
         </h3>
         {icon && (
-          <div className={`${variant === 'default' ? 'text-slate-400 dark:text-slate-400 bg-slate-100/80 dark:bg-slate-800/80 p-1.5 rounded-xl' : 'text-white/90 bg-white/20 p-1.5 rounded-xl'}`}>
+          <div className={`${variant === 'default' ? 'text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded-xl border border-slate-100 dark:border-slate-700' : 'text-white/90 bg-white/20 p-1.5 rounded-xl'}`}>
             {icon}
           </div>
         )}

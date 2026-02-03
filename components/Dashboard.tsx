@@ -261,16 +261,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 pb-12">
-      {/* Header Emerald Premium */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-700 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-900 w-full pt-8 pb-10 px-6 flex flex-col gap-12 shadow-xl">
+      {/* Header Corporativo Blue (Combinando com a tela de login) */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-700 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 w-full pt-8 pb-10 px-6 flex flex-col gap-12 shadow-xl">
         <header className="relative flex items-center justify-between z-10 w-full h-10">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Bem-vindo</span>
             <p className="text-sm font-black text-white leading-none tracking-tight">Olá, {userProfile?.name || 'Parceiro'}</p>
           </div>
-          <div className="absolute left-1/2 -translate-x-1/2">
-             <Logo variant="light" showEmoji={false} size="sm" />
-          </div>
+          {/* Título Meu Corre removido conforme pedido */}
           <button 
             onClick={onOpenMenu}
             className="p-2 rounded-xl bg-white/10 text-white backdrop-blur-md border border-white/10 active:scale-90 transition-all"
@@ -281,12 +279,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="relative flex items-center justify-between z-10">
           <div className="flex flex-col gap-1">
-            <span className="text-emerald-100/50 text-[9px] font-black uppercase tracking-[0.2em]">Faturamento Mês</span>
+            <span className="text-blue-100/50 text-[9px] font-black uppercase tracking-[0.2em]">Faturamento Mês</span>
             <div className="flex items-baseline gap-2">
               <span className="text-white text-3xl font-black tracking-tighter">
                 {isBalanceVisible ? formatCurrency(monthGrossIncome) : 'R$ ••••••'}
               </span>
-              <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="bg-white/10 backdrop-blur-md p-1.5 rounded-xl text-emerald-300">
+              <button onClick={() => setIsBalanceVisible(!isBalanceVisible)} className="bg-white/10 backdrop-blur-md p-1.5 rounded-xl text-blue-300">
                 {isBalanceVisible ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -297,8 +295,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <p className="text-white text-lg font-black leading-none">{isBalanceVisible ? formatCurrency(settledMonthBalance) : '••••'}</p>
                 {isBalanceVisible && todayBalance !== 0 && (
                   <div className="mt-1.5 flex flex-col items-start animate-in fade-in slide-in-from-top-1 duration-500">
-                    <p className="text-[7px] text-emerald-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
-                    <p className="text-[10px] text-emerald-50 font-black tracking-tight leading-none">
+                    <p className="text-[7px] text-blue-300 font-black uppercase tracking-widest opacity-80 mb-0.5">Prévia:</p>
+                    <p className="text-[10px] text-blue-50 font-black tracking-tight leading-none">
                        {formatCurrency(settledMonthBalance + todayBalance)}
                     </p>
                   </div>
@@ -313,11 +311,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Ganhos do Dia */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.25rem] border border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase text-emerald-600/70 mb-0.5">Ganhos de Hoje</p>
+              <p className="text-[9px] font-black uppercase text-blue-600/70 mb-0.5">Ganhos de Hoje</p>
               <p className="text-xl font-black dark:text-white">{formatCurrency(todayStats.income)}</p>
             </div>
           </div>
@@ -333,7 +331,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <Card 
             title="Ganhos Semana" 
             value={formatCurrency(weekBalance)} 
-            icon={<BarChart3 size={14} className="text-emerald-500"/>} 
+            icon={<BarChart3 size={14} className="text-blue-500"/>} 
             valueClassName="text-base" 
           />
           <Card 
@@ -342,18 +340,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             icon={<Fuel size={14} className="text-amber-500" />} 
             onClick={() => onChangeView('fuel-analysis')}
             valueClassName="text-base" 
-            className="border-amber-100 dark:border-transparent"
+            className="border-slate-100 dark:border-transparent shadow-sm"
           />
         </div>
 
-        {/* GRÁFICO DE DESEMPENHO SEMANAL - REPOSICIONADO PARA BAIXO DOS CARDS */}
+        {/* GRÁFICO DE DESEMPENHO SEMANAL */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-              <BarChart3 size={14} className="text-emerald-500" /> Desempenho Semanal
+              <BarChart3 size={14} className="text-blue-500" /> Desempenho Semanal
             </h3>
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
-              <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">Total: {formatCurrency(weekBalance)}</span>
+            <div className="bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-900/40">
+              <span className="text-[9px] font-black text-blue-600 dark:text-blue-400">Total: {formatCurrency(weekBalance)}</span>
             </div>
           </div>
 
@@ -363,21 +361,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
               return (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2 group h-full">
                   <div className="relative w-full flex flex-col items-center justify-end h-full">
-                    {/* Tooltip ao passar o mouse */}
                     <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-30">
                       <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[9px] font-black py-1 px-2 rounded-lg shadow-xl border border-white/10 dark:border-slate-200">
                         {formatCurrency(day.value)}
                       </div>
                     </div>
                     
-                    {/* Fundo da Barra (Trilho) */}
                     <div className="absolute inset-0 w-full bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner" />
 
-                    {/* Preenchimento Sólido Quadrado */}
                     <div 
                       className={`w-full rounded-md transition-all duration-1000 ease-out relative z-10 shadow-md ${
                         day.isToday 
-                          ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-emerald-500/40' 
+                          ? 'bg-gradient-to-t from-blue-700 to-blue-500 shadow-blue-500/40' 
                           : 'bg-gradient-to-t from-slate-400 to-slate-300 dark:from-slate-600 dark:to-slate-500'
                       }`}
                       style={{ height: `${Math.max(day.value > 0 && chartVisible ? 8 : 0, barHeight)}%` }}
@@ -387,7 +382,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        )}
                     </div>
                   </div>
-                  <span className={`text-[10px] font-black uppercase tracking-tighter ${day.isToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-tighter ${day.isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'}`}>
                     {day.label}
                   </span>
                 </div>
@@ -453,12 +448,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           {weekData.dailyTransactions[dayKey].map(t => (
                             <div key={t.id} onClick={(e) => { e.stopPropagation(); handleOpenForm(t); }} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.25rem] border border-slate-50 dark:border-slate-800/50 active:scale-[0.98] transition-all">
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/30'}`}>
                                   {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
                                 </div>
                                 <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
                               </div>
-                              <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              <p className={`text-xs font-black ${t.type === 'income' ? 'text-blue-600' : 'text-rose-600'}`}>
                                 {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                               </p>
                             </div>
@@ -479,11 +474,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* Botão Flutuante Corporativo Blue */}
       <button 
         onClick={() => handleOpenForm()} 
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 bg-slate-900 dark:bg-white rounded-xl shadow-2xl flex items-center justify-center text-white dark:text-slate-900 active:scale-90 transition-all"
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 dark:bg-white rounded-2xl shadow-2xl flex items-center justify-center text-white dark:text-slate-900 active:scale-90 transition-all border border-blue-500/50 dark:border-white"
       >
-        <Plus size={24} strokeWidth={3} />
+        <Plus size={28} strokeWidth={3} />
       </button>
 
       {showForm && (
@@ -496,17 +492,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div className="space-y-4">
                <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex shadow-inner">
-                  <button type="button" onClick={() => setType('income')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all ${type === 'income' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'}`}><TrendingUp size={16} /> Ganho</button>
+                  <button type="button" onClick={() => setType('income')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all ${type === 'income' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}><TrendingUp size={16} /> Ganho</button>
                   <button type="button" onClick={() => setType('expense')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all ${type === 'expense' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400'}`}><TrendingDown size={16} /> Gasto</button>
                </div>
                <div className="relative">
                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">R$</span>
-                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:outline-none dark:text-white border border-slate-200 dark:border-slate-800" />
+                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-white border border-slate-200 dark:bg-slate-950 text-2xl p-4 pl-12 rounded-2xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none dark:text-white transition-all" />
                </div>
-               <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição (ex: iFood)" className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm dark:text-white focus:outline-none border border-slate-200 dark:border-slate-800" />
+               <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição (ex: iFood)" className="w-full bg-white border border-slate-200 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm dark:text-white focus:border-blue-500 outline-none transition-all" />
                <div className="grid grid-cols-2 gap-3">
-                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white border border-slate-200" />
-                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white border border-slate-200">
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-white border border-slate-200 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white outline-none" />
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-white border border-slate-200 dark:bg-slate-950 p-4 rounded-xl font-black text-xs dark:text-white outline-none">
                     <option value="">Categoria</option>
                     {type === 'income' ? DELIVERY_APPS.map(app => <option key={app} value={app}>{app}</option>) : EXPENSE_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
@@ -515,7 +511,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  {editingId && (
                    <button type="button" onClick={() => { onDeleteTransaction(editingId!); setShowForm(false); }} className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100"><Trash2 size={24}/></button>
                  )}
-                 <button type="submit" className="flex-1 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm shadow-xl">
+                 <button type="submit" className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-base shadow-xl active:scale-[0.98] transition-all">
                     {editingId ? 'Salvar Alterações' : 'Confirmar Lançamento'}
                  </button>
                </div>
