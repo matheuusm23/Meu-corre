@@ -27,19 +27,22 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
     });
   }, [transactions, startDate, endDate]);
 
-  // Total feito (ganhos) no ciclo atual
+  // Total feito (ganhos manuais) no ciclo atual
   const incomeTotal = useMemo(() => 
     currentPeriodTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
   [currentPeriodTransactions]);
 
-  // Total de gastos fixos para o ciclo atual
-  const fixedExpensesTotal = useMemo(() => {
+  // Meta de contas fixas: Total de despesas fixas menos os ganhos fixos
+  const netFixedGoal = useMemo(() => {
     const relevantFixed = getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
-    return relevantFixed.filter(e => e.type === 'expense').reduce((acc, e) => acc + e.amount, 0);
+    const expenses = relevantFixed.filter(e => e.type === 'expense').reduce((acc, e) => acc + e.amount, 0);
+    const incomes = relevantFixed.filter(e => e.type === 'income').reduce((acc, e) => acc + e.amount, 0);
+    // O valor que o trabalho manual precisa cobrir é o que sobra das dívidas após os ganhos fixos
+    return Math.max(0, expenses - incomes);
   }, [fixedExpenses, startDate, endDate]);
 
-  const remainingToGoal = Math.max(0, fixedExpensesTotal - incomeTotal);
-  const progressPercent = fixedExpensesTotal > 0 ? Math.min(100, (incomeTotal / fixedExpensesTotal) * 100) : 0;
+  const remainingToGoal = Math.max(0, netFixedGoal - incomeTotal);
+  const progressPercent = netFixedGoal > 0 ? Math.min(100, (incomeTotal / netFixedGoal) * 100) : 0;
 
   // Calendário do ciclo
   const daysInCycle = useMemo(() => {
@@ -71,8 +74,8 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
 
   const dailyTargetNeeded = useMemo(() => {
     if (currentCycleWorkDays.length === 0) return 0;
-    return fixedExpensesTotal / currentCycleWorkDays.length;
-  }, [fixedExpensesTotal, currentCycleWorkDays]);
+    return netFixedGoal / currentCycleWorkDays.length;
+  }, [netFixedGoal, currentCycleWorkDays]);
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6 pb-28">
@@ -101,8 +104,8 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
             <h2 className="text-4xl font-black text-white tracking-tighter">{formatCurrency(incomeTotal)}</h2>
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Meta Fixas</p>
-            <p className="text-lg font-black text-blue-400 tracking-tighter">{formatCurrency(fixedExpensesTotal)}</p>
+            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Meta Líquida</p>
+            <p className="text-lg font-black text-blue-400 tracking-tighter">{formatCurrency(netFixedGoal)}</p>
           </div>
         </div>
 
@@ -145,8 +148,8 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
           </div>
           <div className="w-[1px] h-8 bg-slate-200 dark:bg-slate-700" />
           <div className="flex-1 text-right">
-             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Ciclo</p>
-             <p className="text-sm font-black text-blue-600">{formatCurrency(fixedExpensesTotal)}</p>
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Falta Pagar</p>
+             <p className="text-sm font-black text-blue-600">{formatCurrency(netFixedGoal)}</p>
           </div>
         </div>
       </div>
@@ -193,7 +196,7 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
         <div className="mt-6 flex items-start gap-3 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30">
            <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
            <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 leading-relaxed">
-             Selecione os dias que você pretende trabalhar no calendário acima para calcularmos quanto você precisa faturar por dia para pagar todas as suas <span className="font-black text-blue-600">contas fixas</span>.
+             Selecione os dias que você pretende trabalhar no calendário acima para calcularmos quanto você precisa faturar por dia para pagar o que sobra das suas <span className="font-black text-blue-600">contas fixas</span> após descontar seus ganhos fixos.
            </p>
         </div>
       </div>
