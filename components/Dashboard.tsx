@@ -28,7 +28,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, boolean>>({});
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -102,8 +101,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Header Corporativo Blue */}
-      <div className="relative overflow-hidden bg-blue-600 dark:bg-slate-900 w-full pt-8 pb-14 px-6 flex flex-col gap-12 shadow-xl">
+      {/* Header Compacto Blue */}
+      <div className="relative overflow-hidden bg-blue-600 dark:bg-slate-900 w-full pt-4 pb-10 px-6 flex flex-col gap-6 shadow-xl">
         <header className="relative flex items-center justify-between z-10 w-full">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Bem-vindo</span>
@@ -129,53 +128,55 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 bg-white dark:bg-slate-950 rounded-t-[2.5rem] mt-[-30px] pt-8 px-4 flex flex-col gap-3 relative z-20 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-24">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.25rem] border border-slate-100 dark:border-slate-800 shadow-xl flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <TrendingUp size={24} />
+      <div className="flex-1 bg-white dark:bg-slate-950 rounded-t-[2.5rem] mt-[-20px] pt-6 px-4 flex flex-col gap-3 relative z-20 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-24">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-md flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <TrendingUp size={20} />
             </div>
             <div>
-              <p className="text-[9px] font-black uppercase text-blue-600/70 mb-0.5">Ganhos de Hoje</p>
-              <p className="text-xl font-black dark:text-white">{formatCurrency(todayStats.income)}</p>
+              <p className="text-[8px] font-black uppercase text-blue-600/70 mb-0.5">Ganhos de Hoje</p>
+              <p className="text-lg font-black dark:text-white">{formatCurrency(todayStats.income)}</p>
             </div>
           </div>
           <div className="text-right">
-             <div className="bg-rose-50 dark:bg-rose-950/40 px-3 py-1 rounded-lg border border-rose-100 dark:border-rose-900/30">
+             <div className="bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-100 dark:border-rose-900/30">
                <p className="text-[10px] font-black text-rose-600">-{formatCurrency(todayStats.expense)}</p>
              </div>
           </div>
         </div>
 
-        <div className="space-y-4 pt-4">
+        <div className="space-y-3 pt-2">
           <div className="flex items-center gap-2 px-1">
-            <Clock size={16} className="text-slate-400" />
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Atividades Recentes</h3>
+            <Clock size={14} className="text-slate-400" />
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Atividades Recentes</h3>
           </div>
           
-          {currentPeriodTransactions.length > 0 ? (
-            currentPeriodTransactions.slice(0, 10).map(t => (
-              <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}`}>
-                    {t.type === 'income' ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
+          <div className="space-y-2">
+            {currentPeriodTransactions.length > 0 ? (
+              currentPeriodTransactions.slice(0, 8).map(t => (
+                <div key={t.id} onClick={() => handleOpenForm(t)} className="bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm active:scale-[0.98] transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'income' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600'}`}>
+                      {t.type === 'income' ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-black dark:text-white leading-tight">{t.description}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(t.date).toLocaleDateString('pt-BR')}</p>
-                  </div>
+                  <p className={`text-sm font-black ${t.type === 'income' ? 'text-blue-600' : 'text-rose-600'}`}>
+                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                  </p>
                 </div>
-                <p className={`text-sm font-black ${t.type === 'income' ? 'text-blue-600' : 'text-rose-600'}`}>
-                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
-                </p>
+              ))
+            ) : (
+              <div className="py-10 text-center opacity-30">
+                <Receipt size={28} className="mx-auto mb-2 text-slate-300" />
+                <p className="text-[9px] font-black uppercase tracking-widest">Sem lançamentos</p>
               </div>
-            ))
-          ) : (
-            <div className="py-12 text-center opacity-30">
-              <Receipt size={32} className="mx-auto mb-2 text-slate-300" />
-              <p className="text-[10px] font-black uppercase tracking-widest">Sem lançamentos</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
