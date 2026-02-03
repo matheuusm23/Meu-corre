@@ -77,6 +77,7 @@ const App: React.FC = () => {
     monthlyGoal: 3000, 
     monthlyGoals: {}, 
     daysOff: [],
+    workDays: [], // Inicializa workDays
     startDayOfMonth: 1,
     dailySavingTarget: 0,
     savingsDates: [],
@@ -99,7 +100,12 @@ const App: React.FC = () => {
     if (savedCards) setCreditCards(JSON.parse(savedCards));
     if (savedMaintenance) setPlannedMaintenances(JSON.parse(savedMaintenance));
     if (savedSchedule) setWorkSchedule(JSON.parse(savedSchedule));
-    if (savedGoals) setGoalSettings(JSON.parse(savedGoals));
+    if (savedGoals) {
+      const parsedGoals = JSON.parse(savedGoals);
+      // Garantir que workDays exista
+      if (!parsedGoals.workDays) parsedGoals.workDays = [];
+      setGoalSettings(parsedGoals);
+    }
   }, [isLoggedIn]);
 
   useEffect(() => { 
@@ -148,7 +154,7 @@ const App: React.FC = () => {
     setCreditCards([]);
     setPlannedMaintenances([]);
     setWorkSchedule(DEFAULT_SCHEDULE);
-    setGoalSettings({ monthlyGoal: 0, monthlyGoals: {}, daysOff: [], startDayOfMonth: 1, dailySavingTarget: 0, savingsDates: [], savingsAdjustments: {}, savingsWithdrawals: {} });
+    setGoalSettings({ monthlyGoal: 0, monthlyGoals: {}, daysOff: [], workDays: [], startDayOfMonth: 1, dailySavingTarget: 0, savingsDates: [], savingsAdjustments: {}, savingsWithdrawals: {} });
   };
 
   if (isAuthLoading) {

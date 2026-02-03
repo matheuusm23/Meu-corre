@@ -64,6 +64,7 @@ export interface GoalSettings {
   monthlyGoal: number; // Deprecated
   monthlyGoals?: Record<string, number>; // Deprecated
   daysOff: string[]; // Array of ISO date strings (YYYY-MM-DD)
+  workDays: string[]; // Array of ISO date strings (YYYY-MM-DD) - NOVO
   startDayOfMonth: number; // 1-31
   endDayOfMonth?: number; // 1-31, or undefined for automatic (startDay - 1)
   dailySavingTarget: number; // Valor que o usuário quer guardar por dia
