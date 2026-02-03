@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Trash2, Edit2, LogOut, Settings as SettingsIcon, Moon, Sun, ChevronRight, User, Menu, AlertCircle, Plus, X, CreditCard as CardIcon } from './Icons';
+import { Trash2, Edit2, LogOut, Settings as SettingsIcon, Moon, Sun, ChevronRight, User, Menu, AlertCircle, Plus, X, CreditCard as CardIcon, Calendar, Clock } from './Icons';
 import { GoalSettings, Transaction, CreditCard, UserProfile } from '../types';
 import { formatCurrency } from '../utils';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,7 +36,6 @@ export const Settings: React.FC<SettingsProps> = ({
     e.preventDefault();
     if (!cardName) return;
     const cardData: CreditCard = { id: editingCardId || uuidv4(), name: cardName, color: cardColor, limit: parseFloat(cardLimit) || 0 };
-    // Fixed: replaced undefined editingId with editingCardId
     if (editingCardId) onUpdateCard(cardData); else onAddCard(cardData);
     setShowCardForm(false);
     setCardName('');
@@ -44,8 +43,17 @@ export const Settings: React.FC<SettingsProps> = ({
     setEditingCardId(null);
   };
 
+  const handleUpdateCycleStart = (day: number) => {
+    onUpdateSettings({ ...goalSettings, startDayOfMonth: day });
+  };
+
+  const handleUpdateCycleEnd = (dayStr: string) => {
+    const day = dayStr === "" ? undefined : parseInt(dayStr);
+    onUpdateSettings({ ...goalSettings, endDayOfMonth: day });
+  };
+
   return (
-    <div className="flex flex-col gap-6 px-4 pt-6">
+    <div className="flex flex-col gap-6 px-4 pt-6 pb-28">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -79,8 +87,59 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
       </section>
 
+      {/* Configuração do Ciclo de Faturamento */}
+      <section className="space-y-3">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Ciclo de Faturamento</h3>
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+              <Calendar size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-black dark:text-white leading-tight">Período Mensal</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5 leading-relaxed">Defina quando seu mês financeiro começa e termina para os cálculos de metas.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Dia de Início</label>
+              <select 
+                value={goalSettings.startDayOfMonth} 
+                onChange={(e) => handleUpdateCycleStart(parseInt(e.target.value))}
+                className="w-full bg-slate-50 dark:bg-slate-950 p-3 rounded-xl font-black text-xs dark:text-white border border-slate-100 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>Dia {day}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Dia de Término</label>
+              <select 
+                value={goalSettings.endDayOfMonth ?? ""} 
+                onChange={(e) => handleUpdateCycleEnd(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-950 p-3 rounded-xl font-black text-xs dark:text-white border border-slate-100 dark:border-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Automático</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>Dia {day}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100/50 dark:border-blue-800/30">
+            <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 leading-normal">
+              O modo <span className="font-bold text-blue-600">Automático</span> encerra o ciclo exatamente um dia antes do próximo início.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Visual e Tema Compacto */}
       <section className="space-y-3">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Aparência</h3>
         <div className="bg-white dark:bg-slate-900 p-4 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl flex items-center justify-center">
@@ -105,7 +164,7 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
         
         <div className="space-y-2">
-          {creditCards.map(card => (
+          {creditCards.length > 0 ? creditCards.map(card => (
             <div key={card.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-6 rounded-md shadow-sm" style={{ backgroundColor: card.color }} />
@@ -116,7 +175,11 @@ export const Settings: React.FC<SettingsProps> = ({
               </div>
               <button onClick={() => onDeleteCard(card.id)} className="p-2 text-rose-300"><Trash2 size={16}/></button>
             </div>
-          ))}
+          )) : (
+            <div className="py-4 text-center opacity-30">
+              <p className="text-[9px] font-black uppercase tracking-widest">Nenhum cartão</p>
+            </div>
+          )}
         </div>
       </section>
 
