@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { Transaction, TransactionType, ViewMode, FixedExpense, UserProfile } from '../types';
 import { formatCurrency, isSameDay, isSameWeek, getBillingPeriodRange, getISODate, parseDateLocal, getFixedExpensesForPeriod, formatDateFull, getStartOfWeek } from '../utils';
-import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Home } from './Icons';
+import { TrendingUp, TrendingDown, Plus, X, Trash2, Fuel, Receipt, Eye, EyeOff, Menu, BarChart3, ChevronDown, Clock, Home, Wallet } from './Icons';
 import { v4 as uuidv4 } from 'uuid';
 
 interface DashboardProps {
@@ -55,6 +55,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const relevantFixed = getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
     const receivedFixedIncomes = relevantFixed.filter(e => e.type === 'income' && e.isPaid).reduce((acc, e) => acc + e.amount, 0);
     return manualIncomes + receivedFixedIncomes;
+  }, [currentPeriodTransactions, fixedExpenses, startDate, endDate]);
+
+  const fuelTotal = useMemo(() => {
+    // Gastos manuais com combustível no período
+    const manualFuel = currentPeriodTransactions.filter(t => {
+      if (t.type !== 'expense') return false;
+      const desc = t.description.toLowerCase();
+      return desc.includes('combustível') || desc.includes('gasolina') || desc.includes('posto') || desc.includes('etanol');
+    }).reduce((acc, t) => acc + t.amount, 0);
+
+    // Gastos fixos pagos de combustível no período
+    const relevantFixed = getFixedExpensesForPeriod(fixedExpenses, startDate, endDate);
+    const fixedFuel = relevantFixed.filter(e => {
+      if (e.type !== 'expense' || !e.isPaid) return false;
+      const cat = e.category?.toLowerCase() || '';
+      const title = e.title?.toLowerCase() || '';
+      return cat.includes('combustível') || title.includes('combustível') || title.includes('gasolina');
+    }).reduce((acc, e) => acc + e.amount, 0);
+
+    return manualFuel + fixedFuel;
   }, [currentPeriodTransactions, fixedExpenses, startDate, endDate]);
 
   const todayStats = useMemo(() => {
@@ -129,20 +149,57 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       <div className="flex-1 bg-white dark:bg-slate-950 rounded-t-[2.5rem] mt-[-20px] pt-6 px-4 flex flex-col gap-3 relative z-20 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-24">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-md flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <TrendingUp size={20} />
+        
+        {/* Grid de Resumo */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Faturamento Bruto do Ciclo (Novo Card) */}
+          <div 
+            onClick={() => onChangeView('full-history')}
+            className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-blue-100 dark:border-slate-800 shadow-lg flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Wallet size={24} />
+              </div>
+              <div>
+                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Faturamento Bruto (Ciclo)</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  {isBalanceVisible ? formatCurrency(monthGrossIncome) : 'R$ ••••••'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[8px] font-black uppercase text-blue-600/70 mb-0.5">Ganhos de Hoje</p>
-              <p className="text-lg font-black dark:text-white">{formatCurrency(todayStats.income)}</p>
+            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+               <ChevronDown className="-rotate-90" size={16} />
             </div>
           </div>
-          <div className="text-right">
-             <div className="bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-100 dark:border-rose-900/30">
-               <p className="text-[10px] font-black text-rose-600">-{formatCurrency(todayStats.expense)}</p>
-             </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-md flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black uppercase text-emerald-600/70 mb-0.5">Ganhos de Hoje</p>
+                  <p className="text-lg font-black dark:text-white">{formatCurrency(todayStats.income)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => onChangeView('fuel-analysis')}
+              className="bg-white dark:bg-slate-900 p-4 rounded-[1.75rem] border border-slate-100 dark:border-slate-800 shadow-md flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Fuel size={20} />
+                </div>
+                <div>
+                  <p className="text-[8px] font-black uppercase text-amber-600/70 mb-0.5">Combustível</p>
+                  <p className="text-lg font-black dark:text-white">{formatCurrency(fuelTotal)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
