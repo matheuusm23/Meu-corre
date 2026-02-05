@@ -48,17 +48,48 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
     e.preventDefault();
     if (!amount) return;
     const finalTitle = title.trim() || (type === 'income' ? 'Ganho Fixo' : 'Gasto Fixo');
+    
+    // Buscar dados do original para não perder paidDates e excludedDates ao editar
+    const original = fixedExpenses.find(ex => ex.id === editingId);
+    
     const expenseData: FixedExpense = {
-      id: editingId || uuidv4(), title: finalTitle, amount: parseFloat(amount), category: finalTitle, type, recurrence, startDate: formDate,
-      cardId: isCardExpense ? selectedCardId : undefined, paidDates: [], excludedDates: []
+      id: editingId || uuidv4(), 
+      title: finalTitle, 
+      amount: parseFloat(amount), 
+      category: finalTitle, 
+      type, 
+      recurrence, 
+      startDate: formDate,
+      cardId: isCardExpense ? selectedCardId : undefined, 
+      paidDates: original?.paidDates || [], 
+      excludedDates: original?.excludedDates || []
     };
+    
     if (editingId) onUpdateExpense(expenseData); else onAddExpense(expenseData);
     setShowForm(false);
     setEditingId(null);
   };
 
+  const handleEdit = (expense: FixedExpense) => {
+    setEditingId(expense.id);
+    setTitle(expense.title);
+    setAmount(expense.amount.toString());
+    setFormDate(expense.startDate);
+    setType(expense.type);
+    setRecurrence(expense.recurrence);
+    setIsCardExpense(!!expense.cardId);
+    setSelectedCardId(expense.cardId);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Deseja realmente excluir esta conta fixa?')) {
+      onDeleteExpense(id);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 px-4 pt-6">
+    <div className="flex flex-col gap-6 px-4 pt-6 pb-28">
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
@@ -115,7 +146,7 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
         {activeItems.length > 0 ? (
           activeItems.map(item => (
             <div key={`${item.id}-${item.occurrenceDate}`} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3" onClick={() => handleEdit(item)}>
                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${item.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                   {item.type === 'income' ? <TrendingUp size={18} /> : <Receipt size={18} />}
                 </div>
@@ -124,9 +155,19 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Vence dia {new Date(item.occurrenceDate).getDate()}</p>
                 </div>
               </div>
-              <p className={`text-sm font-black ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
-              </p>
+              <div className="flex items-center gap-4">
+                <p className={`text-sm font-black ${item.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleEdit(item)} className="p-2 text-slate-300 hover:text-blue-500 active:scale-90 transition-all">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(item.id)} className="p-2 text-slate-300 hover:text-rose-500 active:scale-90 transition-all">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
             </div>
           ))
         ) : (
@@ -161,7 +202,10 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
         <div className="fixed inset-0 z-[120] flex items-end justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowForm(false)} />
           <form onSubmit={handleSubmit} className="relative bg-white dark:bg-slate-900 w-full max-w-md rounded-t-[3rem] p-8 shadow-2xl animate-in slide-in-from-bottom border-t border-slate-100 dark:border-slate-800">
-            <h3 className="text-xl font-black dark:text-white tracking-tighter mb-6">Nova Conta Fixa</h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black dark:text-white tracking-tighter">{editingId ? 'Editar Conta' : 'Nova Conta Fixa'}</h3>
+              <button type="button" onClick={() => setShowForm(false)} className="p-2 text-slate-400"><X size={20}/></button>
+            </div>
             <div className="space-y-4">
               <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl flex">
                 <button type="button" onClick={() => setType('income')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black transition-all ${type === 'income' ? 'bg-white text-emerald-600 shadow-md' : 'text-slate-400'}`}>Ganho</button>
@@ -172,8 +216,17 @@ export const FixedExpenses: React.FC<FixedExpensesProps> = ({
                 <input type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" className="w-full bg-slate-50 dark:bg-slate-950 p-5 pl-14 rounded-2xl font-black text-2xl border border-slate-200 dark:border-slate-800 focus:border-blue-500 transition-all outline-none" />
               </div>
               <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="O que é? (ex: Aluguel)" className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-sm border border-slate-200 dark:border-slate-800 outline-none" />
-              <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-xs border border-slate-200 dark:border-slate-800 outline-none" />
-              <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-base shadow-xl active:scale-95 transition-all">Confirmar Conta</button>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-xs border border-slate-200 dark:border-slate-800 outline-none" />
+                <select value={recurrence} onChange={(e) => setRecurrence(e.target.value as RecurrenceType)} className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl font-black text-xs border border-slate-200 dark:border-slate-800 outline-none">
+                  <option value="monthly">Mensal</option>
+                  <option value="single">Única</option>
+                  <option value="installments">Parcelado</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-base shadow-xl active:scale-95 transition-all">
+                {editingId ? 'Salvar Alterações' : 'Confirmar Conta'}
+              </button>
             </div>
           </form>
         </div>
