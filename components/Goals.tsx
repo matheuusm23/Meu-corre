@@ -170,12 +170,17 @@ export const Goals: React.FC<GoalsProps> = ({ goalSettings, transactions, onUpda
             <Calendar size={16} className="text-blue-500" />
             <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Definir Folgas</h3>
           </div>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth() - 1)))} className="p-1.5 text-slate-400"><ChevronLeft size={18}/></button>
-            <p className="text-[10px] font-black uppercase text-slate-900 dark:text-white">
-               {new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(startDate)} - {new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(endDate)}
-            </p>
-            <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth() + 1)))} className="p-1.5 text-slate-400"><ChevronRight size={18}/></button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth() - 1)))} className="p-1.5 text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-lg active:scale-90"><ChevronLeft size={18}/></button>
+            <div className="text-center">
+              <p className="text-[12px] font-black uppercase text-slate-900 dark:text-white leading-none">
+                {new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(startDate)}
+              </p>
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} — {endDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </p>
+            </div>
+            <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth() + 1)))} className="p-1.5 text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-lg active:scale-90"><ChevronRight size={18}/></button>
           </div>
         </div>
 
